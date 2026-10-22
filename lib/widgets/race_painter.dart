@@ -71,6 +71,18 @@ class RacePainter extends CustomPainter {
 
   void _paintScene(Canvas canvas, Size size) {
     final player = state.player;
+    // 参数非有限值会让画布变换静默失效（表现为黑屏且无异常），主动抛错进入保护画面
+    if (!(player.x.isFinite &&
+        player.y.isFinite &&
+        player.angle.isFinite &&
+        camX.isFinite &&
+        camY.isFinite &&
+        zoom.isFinite)) {
+      throw StateError(
+        '渲染参数非法: player=(${player.x}, ${player.y}, ${player.angle}) '
+        'cam=($camX, $camY) zoom=$zoom',
+      );
+    }
     canvas.save();
     canvas.translate(size.width / 2, size.height * 0.58);
     canvas.rotate(-player.angle - math.pi / 2);
