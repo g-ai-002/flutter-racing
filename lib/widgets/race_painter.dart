@@ -20,6 +20,8 @@ class RacePainter extends CustomPainter {
   final double camY;
   final double zoom;
 
+  static bool _paintErrorLogged = false;
+
   RacePainter({
     required this.state,
     required this.track,
@@ -32,6 +34,42 @@ class RacePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    try {
+      _paintScene(canvas, size);
+    } catch (e, stack) {
+      if (!_paintErrorLogged) {
+        _paintErrorLogged = true;
+        // 走 Flutter 全局错误通道，由 main.dart 统一写入日志文件
+        FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: e,
+            stack: stack,
+            library: 'flutter_racing',
+            context: ErrorDescription('比赛画面渲染'),
+          ),
+        );
+      }
+      _paintErrorFallback(canvas, size);
+    }
+  }
+
+  /// 渲染异常时的保护画面，避免持续黑屏且给出反馈指引
+  void _paintErrorFallback(Canvas canvas, Size size) {
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()..color = const Color(0xFF11151A),
+    );
+    final tp = TextPainter(
+      text: const TextSpan(
+        text: '渲染异常 · 请到 设置 → 查看日志 复制日志反馈',
+        style: TextStyle(color: Colors.white70, fontSize: 14),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: size.width - 48);
+    tp.paint(canvas, Offset(24, size.height / 2 - tp.height / 2));
+  }
+
+  void _paintScene(Canvas canvas, Size size) {
     final player = state.player;
     canvas.save();
     canvas.translate(size.width / 2, size.height * 0.58);

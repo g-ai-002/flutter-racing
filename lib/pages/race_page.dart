@@ -163,6 +163,11 @@ class _RacePageState extends State<RacePage> {
   }
 
   void _togglePause() {
+    // 主循环异常时：允许直接退出比赛去查看日志
+    if (_race.lastError != null) {
+      Navigator.pop(context);
+      return;
+    }
     if (_race.state.phase != RacePhase.running) {
       return;
     }

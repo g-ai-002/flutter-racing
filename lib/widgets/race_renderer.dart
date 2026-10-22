@@ -149,6 +149,44 @@ class _RaceRendererState extends State<RaceRenderer> {
                 boost: player.boostTimer > 0,
               ),
             ),
+            if (race.lastError != null)
+              Positioned(
+                left: 24,
+                right: 24,
+                top: 150,
+                child: IgnorePointer(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE53935).withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '检测到运行时错误，比赛已暂停。'
+                            '请到「设置 → 查看日志」复制日志反馈。',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             if (widget.isMobile)
               TouchControls(race: race)
             else ...[

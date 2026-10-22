@@ -21,9 +21,14 @@ class RaceProvider extends ChangeNotifier {
   Timer? _loop;
   AudioService? _audio;
   bool paused = false;
+
+  /// 主循环异常信息（非空时页面展示反馈横幅，且禁止继续比赛）
+  String? lastError;
+
   double _finalLapBannerUntil = -10;
   int _tickCount = 0;
   bool _driftSoundOn = false;
+  RacePhase _lastPhase = RacePhase.countdown;
 
   // ---- 输入状态机 ----
   bool _steerLeft = false;
@@ -99,7 +104,7 @@ class RaceProvider extends ChangeNotifier {
   }
 
   void resume() {
-    if (!paused) {
+    if (!paused || lastError != null) {
       return;
     }
     paused = false;
@@ -136,11 +141,44 @@ class RaceProvider extends ChangeNotifier {
     if (paused || state.phase == RacePhase.finished) {
       return;
     }
-    engine.update(dt, _buildInput());
-    _handleEvents();
-    _updateAudioTick();
-    _tickCount++;
+    try {
+      engine.update(dt, _buildInput());
+      _handleEvents();
+      _updateAudioTick();
+      _tickCount++;
+      _logProgress();
+      notifyListeners();
+    } catch (e, stack) {
+      _handleCrash(e, stack);
+    }
+  }
+
+  /// 主循环异常：记录完整堆栈、暂停比赛并在画面顶部提示反馈日志
+  void _handleCrash(Object error, StackTrace stack) {
+    lastError = '$error';
+    paused = true;
+    _stopLoop();
+    LogService.error('比赛主循环异常，已暂停并保留错误信息', error, stack);
+    _audio?.stopEngine();
+    _audio?.stopDrift();
+    _driftSoundOn = false;
     notifyListeners();
+  }
+
+  void _logProgress() {
+    final phase = state.phase;
+    if (phase != _lastPhase) {
+      _lastPhase = phase;
+      LogService.info('比赛阶段变更: $phase');
+    }
+    // 每约 5 秒记录一次比赛遥测，便于定位卡死/黑屏发生的时间点
+    if (phase == RacePhase.running && _tickCount % 300 == 0) {
+      final p = state.player;
+      LogService.info(
+        '比赛进行中: t=${state.raceTime.toStringAsFixed(1)}s '
+        '速度=${p.speed.round()} 圈=${p.lapDisplay} 位置=${p.position}',
+      );
+    }
   }
 
   void _handleEvents() {
@@ -151,6 +189,7 @@ class RaceProvider extends ChangeNotifier {
         case EngineEvent.countdownTick:
           _audio?.playBeep();
         case EngineEvent.go:
+          LogService.info('GO! 比赛开始');
           _audio?.playGo();
           _audio?.startBgm();
           _audio?.startEngine();
