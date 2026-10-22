@@ -206,41 +206,49 @@ class _SettingsPageState extends State<SettingsPage> {
     showDialog<void>(
       context: context,
       builder: (ctx) {
-        return Dialog(
-          insetPadding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppBar(
-                title: const Text('应用日志'),
-                automaticallyImplyLeading: false,
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: _loadLogs,
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return Dialog(
+              insetPadding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppBar(
+                    title: const Text('应用日志'),
+                    automaticallyImplyLeading: false,
+                    actions: [
+                      IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: () {
+                          _loadLogs();
+                          setDialogState(() {});
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.copy),
+                        tooltip: '复制全部',
+                        onPressed: () => _copyText(ctx, _logContent),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.copy),
-                    tooltip: '复制全部',
-                    onPressed: () => _copyText(ctx, _logContent),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(ctx),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: SelectableText(
+                        _logContent.isEmpty ? '暂无日志' : _logContent,
+                        style: const TextStyle(
+                            fontFamily: 'monospace', fontSize: 11),
+                      ),
+                    ),
                   ),
                 ],
               ),
-              Flexible(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: SelectableText(
-                    _logContent.isEmpty ? '暂无日志' : _logContent,
-                    style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
