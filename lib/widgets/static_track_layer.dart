@@ -1,0 +1,356 @@
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+
+import '../engine/track_geometry.dart';
+import '../models/track_def.dart';
+
+/// 预渲染的静态赛道层（地面/路面/路缘/格纹起跑线/装饰）。
+/// [origin] 为图像左上角对应的世界坐标，绘制时据此平移。
+class StaticTrackLayer {
+  final ui.Image image;
+  final ui.Offset origin;
+
+  const StaticTrackLayer({required this.image, required this.origin});
+}
+
+class _Palette {
+  final ui.Color ground;
+  final ui.Color patch;
+  final ui.Color road;
+  final ui.Color border;
+  final ui.Color curbA;
+  final ui.Color curbB;
+
+  const _Palette({
+    required this.ground,
+    required this.patch,
+    required this.road,
+    required this.border,
+    required this.curbA,
+    required this.curbB,
+  });
+
+  static _Palette of(TrackTheme theme) {
+    return switch (theme) {
+      TrackTheme.seaside => const _Palette(
+        ground: ui.Color(0xFF7CB342),
+        patch: ui.Color(0xFF689F38),
+        road: ui.Color(0xFF546E7A),
+        border: ui.Color(0xFF37474F),
+        curbA: ui.Color(0xFFE53935),
+        curbB: ui.Color(0xFFFAFAFA),
+      ),
+      TrackTheme.desert => const _Palette(
+        ground: ui.Color(0xFFEDD892),
+        patch: ui.Color(0xFFE0C275),
+        road: ui.Color(0xFF546E7A),
+        border: ui.Color(0xFF37474F),
+        curbA: ui.Color(0xFFE53935),
+        curbB: ui.Color(0xFFFAFAFA),
+      ),
+      TrackTheme.alpine => const _Palette(
+        ground: ui.Color(0xFFE8F1F5),
+        patch: ui.Color(0xFFD3E5EE),
+        road: ui.Color(0xFF4A6572),
+        border: ui.Color(0xFF2F4550),
+        curbA: ui.Color(0xFFE53935),
+        curbB: ui.Color(0xFFFAFAFA),
+      ),
+    };
+  }
+}
+
+/// 生成静态赛道层（异步：Picture.toImage）。
+Future<StaticTrackLayer> buildStaticTrackLayer(
+  TrackDef def,
+  TrackGeometry track,
+) async {
+  const margin = 150.0;
+  var minX = double.infinity;
+  var minY = double.infinity;
+  var maxX = double.negativeInfinity;
+  var maxY = double.negativeInfinity;
+  for (final p in track.points) {
+    if (p.dx < minX) minX = p.dx;
+    if (p.dy < minY) minY = p.dy;
+    if (p.dx > maxX) maxX = p.dx;
+    if (p.dy > maxY) maxY = p.dy;
+  }
+  final origin = ui.Offset(minX - margin, minY - margin);
+  final width = (maxX - minX + margin * 2).ceil();
+  final height = (maxY - minY + margin * 2).ceil();
+
+  final palette = _Palette.of(def.theme);
+  final recorder = ui.PictureRecorder();
+  final canvas = ui.Canvas(recorder);
+  canvas.translate(-origin.dx, -origin.dy);
+
+  // 1. 地面
+  canvas.drawRect(
+    ui.Rect.fromLTWH(origin.dx, origin.dy, width.toDouble(), height.toDouble()),
+    ui.Paint()..color = palette.ground,
+  );
+
+  // 2. 地面斑块
+  final rng = math.Random(def.id.hashCode & 0x7fffffff);
+  final groundPaint = ui.Paint()..color = palette.patch;
+  for (var i = 0; i < 260; i++) {
+    final px = origin.dx + rng.nextDouble() * width;
+    final py = origin.dy + rng.nextDouble() * height;
+    final r = 8 + rng.nextDouble() * 26;
+    canvas.drawOval(ui.Rect.fromCircle(center: ui.Offset(px, py), radius: r), groundPaint);
+  }
+
+  // 3. 路面：外描边 + 沥青主体
+  final centerPath = ui.Path();
+  centerPath.moveTo(track.points[0].dx, track.points[0].dy);
+  for (var i = 1; i < track.pointCount; i++) {
+    centerPath.lineTo(track.points[i].dx, track.points[i].dy);
+  }
+  centerPath.close();
+  canvas.drawPath(
+    centerPath,
+    ui.Paint()
+      ..style = ui.PaintingStyle.stroke
+      ..strokeWidth = track.halfWidth * 2 + 12
+      ..strokeJoin = ui.StrokeJoin.round
+      ..color = palette.border,
+  );
+  canvas.drawPath(
+    centerPath,
+    ui.Paint()
+      ..style = ui.PaintingStyle.stroke
+      ..strokeWidth = track.halfWidth * 2
+      ..strokeJoin = ui.StrokeJoin.round
+      ..color = palette.road,
+  );
+
+  // 4. 路缘石（弯道处红白相间）
+  final curbTickSize = ui.Rect.fromCenter(
+    center: ui.Offset.zero,
+    width: 2.6,
+    height: 10,
+  );
+  for (var i = 0; i < track.pointCount; i += 2) {
+    if (track.curvature[i] < 0.0055) {
+      continue;
+    }
+    final p = track.pointAt(i);
+    final ang = track.tangentAngleAt(i);
+    final nx = math.sin(ang);
+    final ny = -math.cos(ang);
+    final phase = ((i * TrackGeometry.spacing) / 10).floor() % 2;
+    final paint = ui.Paint()..color = phase == 0 ? palette.curbA : palette.curbB;
+    for (final side in const [1.0, -1.0]) {
+      canvas.save();
+      canvas.translate(p.dx + nx * side * (track.halfWidth + 3), p.dy + ny * side * (track.halfWidth + 3));
+      canvas.rotate(ang);
+      canvas.drawRect(curbTickSize, paint);
+      canvas.restore();
+    }
+  }
+
+  // 5. 路边白线
+  final edgePaint = ui.Paint()
+    ..style = ui.PaintingStyle.stroke
+    ..strokeWidth = 2.2
+    ..color = const ui.Color(0xDDECEFF1);
+  for (final side in const [1.0, -1.0]) {
+    final edge = ui.Path();
+    for (var i = 0; i <= track.pointCount; i += 4) {
+      final p = track.pointAt(i);
+      final ang = track.tangentAngleAt(i);
+      final ex = p.dx + math.sin(ang) * side * (track.halfWidth - 3);
+      final ey = p.dy - math.cos(ang) * side * (track.halfWidth - 3);
+      if (i == 0) {
+        edge.moveTo(ex, ey);
+      } else {
+        edge.lineTo(ex, ey);
+      }
+    }
+    edge.close();
+    canvas.drawPath(edge, edgePaint);
+  }
+
+  // 6. 起点格纹带 + 门柱
+  final p0 = track.pointAt(0);
+  final ang0 = track.tangentAngleAt(0);
+  final t0 = ui.Offset(math.cos(ang0), math.sin(ang0));
+  final n0 = ui.Offset(math.sin(ang0), -math.cos(ang0));
+  for (var row = 0; row < 2; row++) {
+    var col = 0;
+    for (var lat = -track.halfWidth + 4; lat < track.halfWidth - 4; lat += 8) {
+      final center = ui.Offset(
+        p0.dx + t0.dx * row * 8 + n0.dx * lat,
+        p0.dy + t0.dy * row * 8 + n0.dy * lat,
+      );
+      canvas.save();
+      canvas.translate(center.dx, center.dy);
+      canvas.rotate(ang0);
+      canvas.drawRect(
+        ui.Rect.fromCenter(center: ui.Offset.zero, width: 8, height: 8),
+        ui.Paint()..color = (row + col) % 2 == 0 ? const ui.Color(0xFFFAFAFA) : const ui.Color(0xFF212121),
+      );
+      canvas.restore();
+      col++;
+    }
+  }
+  final postPaint = ui.Paint()..color = const ui.Color(0xFF37474F);
+  for (final side in const [1.0, -1.0]) {
+    canvas.drawCircle(
+      ui.Offset(
+        p0.dx + n0.dx * side * (track.halfWidth + 9),
+        p0.dy + n0.dy * side * (track.halfWidth + 9),
+      ),
+      4,
+      postPaint,
+    );
+  }
+
+  // 7. 主题装饰（树/仙人掌/雪松/岩石），避开路面
+  _drawDecorations(canvas, def, track, rng, origin, width, height);
+
+  final picture = recorder.endRecording();
+  final image = await picture.toImage(width, height);
+  picture.dispose();
+  return StaticTrackLayer(image: image, origin: origin);
+}
+
+void _drawDecorations(
+  ui.Canvas canvas,
+  TrackDef def,
+  TrackGeometry track,
+  math.Random rng,
+  ui.Offset origin,
+  int width,
+  int height,
+) {
+  const decorCount = 90;
+  var placed = 0;
+  var attempts = 0;
+  final minDist = track.halfWidth + 26;
+  while (placed < decorCount && attempts < decorCount * 6) {
+    attempts++;
+    final idx = rng.nextInt(track.pointCount);
+    final base = track.pointAt(idx);
+    final ang = track.tangentAngleAt(idx);
+    final nx = math.sin(ang);
+    final ny = -math.cos(ang);
+    final side = rng.nextBool() ? 1.0 : -1.0;
+    final dist = track.halfWidth + 30 + rng.nextDouble() * 80;
+    final px = base.dx + nx * side * dist;
+    final py = base.dy + ny * side * dist;
+
+    // 画布内 & 不贴路面
+    if (px < origin.dx + 16 ||
+        px > origin.dx + width - 16 ||
+        py < origin.dy + 16 ||
+        py > origin.dy + height - 16) {
+      continue;
+    }
+    var tooClose = false;
+    for (var j = 0; j < track.pointCount; j += 6) {
+      final q = track.pointAt(j);
+      final dx = q.dx - px;
+      final dy = q.dy - py;
+      if (dx * dx + dy * dy < minDist * minDist) {
+        tooClose = true;
+        break;
+      }
+    }
+    if (tooClose) {
+      continue;
+    }
+
+    final scale = 0.7 + rng.nextDouble() * 0.6;
+    canvas.save();
+    canvas.translate(px, py);
+    canvas.scale(scale);
+    switch (def.theme) {
+      case TrackTheme.seaside:
+        _drawTree(canvas, rng);
+      case TrackTheme.desert:
+        rng.nextDouble() < 0.6 ? _drawCactus(canvas, rng) : _drawRock(canvas, rng);
+      case TrackTheme.alpine:
+        rng.nextDouble() < 0.7 ? _drawPine(canvas, rng) : _drawRock(canvas, rng);
+    }
+    canvas.restore();
+    placed++;
+  }
+}
+
+void _drawTree(ui.Canvas canvas, math.Random rng) {
+  canvas.drawCircle(
+    const ui.Offset(0, -9),
+    2.4,
+    ui.Paint()..color = const ui.Color(0xFF6D4C41),
+  );
+  final green = ui.Paint()..color = const ui.Color(0xFF2E7D32);
+  final darkGreen = ui.Paint()..color = const ui.Color(0xFF1B5E20);
+  canvas.drawCircle(ui.Offset(-5, -16), 7.5, darkGreen);
+  canvas.drawCircle(const ui.Offset(5, -16), 7.5, darkGreen);
+  canvas.drawCircle(const ui.Offset(0, -22), 8, green);
+}
+
+void _drawCactus(ui.Canvas canvas, math.Random rng) {
+  final paint = ui.Paint()..color = const ui.Color(0xFF388E3C);
+  final rrect = ui.RRect.fromRectAndRadius(
+    ui.Rect.fromCenter(center: const ui.Offset(0, -8), width: 7, height: 20),
+    const ui.Radius.circular(3.5),
+  );
+  canvas.drawRRect(rrect, paint);
+  canvas.drawRRect(
+    ui.RRect.fromRectAndRadius(
+      ui.Rect.fromCenter(center: const ui.Offset(-7, -12), width: 6, height: 10),
+      const ui.Radius.circular(3),
+    ),
+    paint,
+  );
+  canvas.drawRRect(
+    ui.RRect.fromRectAndRadius(
+      ui.Rect.fromCenter(center: const ui.Offset(7, -15), width: 6, height: 10),
+      const ui.Radius.circular(3),
+    ),
+    paint,
+  );
+}
+
+void _drawPine(ui.Canvas canvas, math.Random rng) {
+  final paint = ui.Paint()..color = const ui.Color(0xFF2E5D46);
+  final snow = ui.Paint()..color = const ui.Color(0xFFFFFFFF);
+  canvas.drawRect(
+    ui.Rect.fromCenter(center: const ui.Offset(0, -3), width: 4, height: 7),
+    ui.Paint()..color = const ui.Color(0xFF5D4037),
+  );
+  final path = ui.Path()
+    ..moveTo(-9, -4)
+    ..lineTo(0, -12)
+    ..lineTo(9, -4)
+    ..close();
+  canvas.drawPath(path, paint);
+  final path2 = ui.Path()
+    ..moveTo(-6.5, -10)
+    ..lineTo(0, -18)
+    ..lineTo(6.5, -10)
+    ..close();
+  canvas.drawPath(path2, paint);
+  final cap = ui.Path()
+    ..moveTo(-4, -14)
+    ..lineTo(0, -18)
+    ..lineTo(4, -14)
+    ..close();
+  canvas.drawPath(cap, snow);
+}
+
+void _drawRock(ui.Canvas canvas, math.Random rng) {
+  canvas.drawCircle(
+    const ui.Offset(0, -3),
+    5.5,
+    ui.Paint()..color = const ui.Color(0xFF9E9E9E),
+  );
+  canvas.drawCircle(
+    const ui.Offset(-4, 0),
+    3.5,
+    ui.Paint()..color = const ui.Color(0xFF8D8D8D),
+  );
+}
