@@ -13,7 +13,19 @@ class AiDriver {
     if (k.spinTimer > 0) {
       return KartInput.idle;
     }
-    final look = math.min(52.0, math.max(26.0, 24 + k.speed * 0.115));
+
+    // 前方最大曲率决定弯道限速
+    var maxCurv = 1e-4;
+    for (var d = 6; d <= 54; d += 4) {
+      final c = track.curvature[track.wrapIndex(k.centerIndex + d)];
+      if (c > maxCurv) {
+        maxCurv = c;
+      }
+    }
+
+    // 弯道缩短前瞻，避免高速切弯撞墙
+    final baseLook = math.min(52.0, math.max(26.0, 24 + k.speed * 0.115));
+    final look = maxCurv > 0.008 ? math.max(22.0, baseLook * 0.55) : baseLook;
     final idx = track.wrapIndex(k.centerIndex + (look / TrackGeometry.spacing).round());
     final p = track.pointAt(idx);
     final normal = track.normalAt(idx);
@@ -31,15 +43,7 @@ class AiDriver {
     var steer = diff * 2.6 + math.sin(race.raceTime * 2.3 + k.aiSeed) * 0.05;
     steer = steer < -1 ? -1.0 : (steer > 1 ? 1.0 : steer);
 
-    // 前方最大曲率决定弯道限速
-    var maxCurv = 1e-4;
-    for (var d = 6; d <= 54; d += 4) {
-      final c = track.curvature[track.wrapIndex(k.centerIndex + d)];
-      if (c > maxCurv) {
-        maxCurv = c;
-      }
-    }
-    final cornerSpeed = math.sqrt(300.0 / maxCurv);
+    final cornerSpeed = math.sqrt(280.0 / maxCurv);
     final targetSpeed = math.min(
       KartPhysics.baseMaxSpeed * k.statTopSpeedMul * k.aiSkill * k.aiSpeedMul,
       cornerSpeed,

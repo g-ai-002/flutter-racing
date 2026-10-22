@@ -40,22 +40,34 @@ void main() {
   test('油门加速到极速并保持', () {
     final k = makeKart();
     final state = makeState(k);
+    // 移到起跑直道，避免长距离直线行驶在弯道撞墙/出路面干扰极速验证
+    final start = track.posAtS(200);
+    k.x = start.dx;
+    k.y = start.dy;
+    k.angle = track.tangentAngleAt(100);
+    k.centerIndex = 100;
     const input = KartInput(throttle: true);
-    for (var i = 0; i < 600; i++) {
+    for (var i = 0; i < 120; i++) {
       KartPhysics.step(kart: k, input: input, track: track, race: state, dt: dt);
     }
     expect(k.speed, closeTo(KartPhysics.baseMaxSpeed, 0.5));
   });
 
-  test('刹车减速到零并可倒车', () {
+  test('刹车减速并进入倒车', () {
     final k = makeKart();
     final state = makeState(k);
+    final start = track.posAtS(200);
+    k.x = start.dx;
+    k.y = start.dy;
+    k.angle = track.tangentAngleAt(100);
+    k.centerIndex = 100;
     k.speed = 120;
     const input = KartInput(brake: true);
-    for (var i = 0; i < 60; i++) {
+    // 约 0.36s 减速到零，随后持续倒车
+    for (var i = 0; i < 30; i++) {
       KartPhysics.step(kart: k, input: input, track: track, race: state, dt: dt);
     }
-    expect(k.speed, 0);
+    expect(k.speed, lessThan(0));
     for (var i = 0; i < 60; i++) {
       KartPhysics.step(kart: k, input: input, track: track, race: state, dt: dt);
     }

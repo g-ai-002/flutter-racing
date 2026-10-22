@@ -1,13 +1,31 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_racing/services/audio_service.dart';
 
-/// CI 单测环境无音频插件：所有平台通道调用应被防御性吞掉（记日志不外抛）。
+/// CI 单测环境无音频插件：用 mock 通道替代原生实现，验证服务全部接口可用且不抛。
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  const channels = [
+    'xyz.luan/audioplayers',
+    'xyz.luan/audioplayers.global',
+    'xyz.luan/audioplayers/events',
+  ];
+
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+    for (final name in channels) {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(MethodChannel(name), (call) async => null);
+    }
+  });
+
+  tearDown(() {
+    for (final name in channels) {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(MethodChannel(name), null);
+    }
   });
 
   test('初始化与全部播放接口不抛', () async {
@@ -31,14 +49,14 @@ void main() {
     await audio.stopEngine();
     await audio.startDrift();
     await audio.stopDrift();
-    audio.dispose();
+    await audio.dispose();
   });
 
   test('dispose 后可重新实例化', () async {
     final a1 = await AudioService.instance;
-    a1.dispose();
+    await a1.dispose();
     final a2 = await AudioService.instance;
     expect(identical(a1, a2), isFalse);
-    a2.dispose();
+    await a2.dispose();
   });
 }

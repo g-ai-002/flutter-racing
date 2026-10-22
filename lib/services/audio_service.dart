@@ -156,13 +156,15 @@ class AudioService {
     }
   }
 
-  void dispose() {
-    try {
-      _sfxPlayer.dispose();
-      _bgmPlayer.dispose();
-      _enginePlayer.dispose();
-      _driftPlayer.dispose();
-    } catch (_) {}
+  Future<void> dispose() async {
+    // dispose 返回的是异步 Future，未 await 的 try/catch 抓不住平台异常
+    for (final player in [_sfxPlayer, _bgmPlayer, _enginePlayer, _driftPlayer]) {
+      try {
+        await player.dispose();
+      } catch (e) {
+        LogService.warning('释放音频播放器失败: $e');
+      }
+    }
     _instance = null;
     _initialized = false;
   }

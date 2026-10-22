@@ -62,7 +62,8 @@ void main() {
     expect(k.item, isNotNull);
     expect(box.active, isFalse);
 
-    for (var i = 0; i < 60 * 5; i++) {
+    // 多跑几步，避免浮点递减残留导致计时器未归零
+    for (var i = 0; i < 60 * 5 + 5; i++) {
       ItemManager.update(state, track, 1 / 60, rng);
     }
     expect(box.active, isTrue);

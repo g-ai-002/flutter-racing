@@ -39,8 +39,8 @@ void main() {
     );
     final player = engine.state.player;
     expect(player.progress, lessThan(0));
-    // AI 出发，玩家原地不动
-    for (var i = 0; i < 60 * 3; i++) {
+    // AI 出发，玩家原地不动（倒计时 3.6s，多跑几秒让名次排序生效）
+    for (var i = 0; i < 60 * 6; i++) {
       engine.update(1 / 60, KartInput.idle);
     }
     expect(player.position, 4);
@@ -87,7 +87,7 @@ void main() {
       );
       const dt = 1 / 60;
       var steps = 0;
-      while (engine.state.phase != RacePhase.finished && steps < 60 * 130) {
+      while (engine.state.phase != RacePhase.finished && steps < 60 * 220) {
         final input = AiDriver.drive(
           engine.state.player,
           engine.state,

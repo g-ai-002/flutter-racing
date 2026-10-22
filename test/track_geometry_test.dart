@@ -42,7 +42,8 @@ void main() {
 
       test('project 沿中心线跟踪定位', () {
         var hint = 0;
-        for (var i = 0; i < track.pointCount; i += 37) {
+        // 步进需小于投影搜索窗口（±28 采样点），保证按前一点提示可连续追踪
+        for (var i = 0; i < track.pointCount; i += 20) {
           final p = track.pointAt(i);
           final proj = track.project(p.dx, p.dy, hint);
           expect(proj.s, closeTo(i * TrackGeometry.spacing, 4.0));
