@@ -1,7 +1,7 @@
 name: flutter_racing
 description: 极速卡丁车 - 类跑跑卡丁车 Flutter 赛车游戏
 publish_to: 'none'
-version: 0.1.0
+version: 0.1.1
 
 environment:
   sdk: '>=3.13.5 <4.0.0'
