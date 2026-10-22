@@ -104,6 +104,12 @@ ThemeData _buildBase({
       ),
       shape: Border(bottom: BorderSide(color: outline, width: 0.5)),
     ),
+    // 分割线：与各兄弟项目一致，0.5px 极细线
+    dividerTheme: DividerThemeData(
+      color: outline,
+      thickness: 0.5,
+      space: 0.5,
+    ),
     cardTheme: CardThemeData(
       elevation: 0,
       color: surface,
