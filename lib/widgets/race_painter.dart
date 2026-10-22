@@ -8,6 +8,7 @@ import '../models/character.dart';
 import '../models/kart_state.dart';
 import '../models/race_state.dart';
 import '../models/track_def.dart';
+import '../services/log_service.dart';
 import 'static_track_layer.dart';
 
 /// 世界渲染器：俯视角 2D，镜头随玩家车头方向旋转（车头永远朝上）。
@@ -21,6 +22,9 @@ class RacePainter extends CustomPainter {
   final double zoom;
 
   static bool _paintErrorLogged = false;
+
+  /// 首帧绘制日志（画布尺寸/缩放/玩家坐标），用于定位“无异常黑屏”类问题
+  static bool _firstFrameLogged = false;
 
   RacePainter({
     required this.state,
@@ -81,6 +85,14 @@ class RacePainter extends CustomPainter {
       throw StateError(
         '渲染参数非法: player=(${player.x}, ${player.y}, ${player.angle}) '
         'cam=($camX, $camY) zoom=$zoom',
+      );
+    }
+    if (!_firstFrameLogged) {
+      _firstFrameLogged = true;
+      LogService.info(
+        '首帧绘制: 画布=${size.width.toStringAsFixed(0)}x'
+        '${size.height.toStringAsFixed(0)}, zoom=${zoom.toStringAsFixed(2)}, '
+        '玩家=(${player.x.toStringAsFixed(1)}, ${player.y.toStringAsFixed(1)})',
       );
     }
     canvas.save();

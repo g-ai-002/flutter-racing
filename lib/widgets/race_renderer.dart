@@ -106,6 +106,7 @@ class _RaceRendererState extends State<RaceRenderer> {
         final bestLap = race.storage.bestLapFor(race.engine.trackDef.id);
 
         return Stack(
+          fit: StackFit.expand,
           children: [
             Positioned.fill(
               child: CustomPaint(

@@ -239,6 +239,7 @@ class _RacePageState extends State<RacePage> {
       child: Scaffold(
         backgroundColor: Colors.black,
         body: Stack(
+          fit: StackFit.expand,
           children: [
             RaceRenderer(
               race: _race,
