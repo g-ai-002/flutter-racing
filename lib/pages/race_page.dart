@@ -34,31 +34,32 @@ class _RacePageState extends State<RacePage> {
   final FocusNode _focusNode = FocusNode();
   late final RaceProvider _race;
 
-  static const Set<LogicalKeyboardKey> _throttleKeys = {
+  // 常量集合元素不能覆写 ==/hashCode（LogicalKeyboardKey 会），故用 final
+  static final Set<LogicalKeyboardKey> _throttleKeys = {
     LogicalKeyboardKey.arrowUp,
     LogicalKeyboardKey.keyW,
   };
-  static const Set<LogicalKeyboardKey> _brakeKeys = {
+  static final Set<LogicalKeyboardKey> _brakeKeys = {
     LogicalKeyboardKey.arrowDown,
     LogicalKeyboardKey.keyS,
   };
-  static const Set<LogicalKeyboardKey> _leftKeys = {
+  static final Set<LogicalKeyboardKey> _leftKeys = {
     LogicalKeyboardKey.arrowLeft,
     LogicalKeyboardKey.keyA,
   };
-  static const Set<LogicalKeyboardKey> _rightKeys = {
+  static final Set<LogicalKeyboardKey> _rightKeys = {
     LogicalKeyboardKey.arrowRight,
     LogicalKeyboardKey.keyD,
   };
-  static const Set<LogicalKeyboardKey> _driftKeys = {
+  static final Set<LogicalKeyboardKey> _driftKeys = {
     LogicalKeyboardKey.space,
   };
-  static const Set<LogicalKeyboardKey> _itemKeys = {
+  static final Set<LogicalKeyboardKey> _itemKeys = {
     LogicalKeyboardKey.controlLeft,
     LogicalKeyboardKey.controlRight,
     LogicalKeyboardKey.keyE,
   };
-  static const Set<LogicalKeyboardKey> _pauseKeys = {
+  static final Set<LogicalKeyboardKey> _pauseKeys = {
     LogicalKeyboardKey.keyP,
     LogicalKeyboardKey.escape,
   };

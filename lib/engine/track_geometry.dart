@@ -213,8 +213,8 @@ class TrackGeometry {
   /// 最近点投影：带索引提示的局部窗口搜索
   TrackProjection project(double px, double py, int hint) {
     var best = wrapIndex(hint);
-    var bestDx = points[best].dx - px;
-    var bestDy = points[best].dy - py;
+    final bestDx = points[best].dx - px;
+    final bestDy = points[best].dy - py;
     var bestD2 = bestDx * bestDx + bestDy * bestDy;
     for (var k = -searchWindow; k <= searchWindow; k++) {
       final i = wrapIndex(hint + k);
@@ -286,7 +286,7 @@ class TrackGeometry {
   }
 
   bool selfIntersects() {
-    final stride = 3;
+    const stride = 3;
     final m = pointCount ~/ stride;
     for (var i = 0; i < m; i++) {
       final a1 = points[i * stride];

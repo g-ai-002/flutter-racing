@@ -254,7 +254,7 @@ class RaceEngine {
 
   void _resolveCollisions() {
     final karts = state.karts;
-    final minD = KartPhysics.kartRadius * 2;
+    const minD = KartPhysics.kartRadius * 2;
     for (var i = 0; i < karts.length; i++) {
       for (var j = i + 1; j < karts.length; j++) {
         final a = karts[i];

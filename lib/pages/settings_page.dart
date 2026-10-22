@@ -36,9 +36,9 @@ class SettingsPage extends StatelessWidget {
               onChanged: (v) => settings.setDarkMode(v),
             ),
             const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.info_outline),
-              title: const Text('关于'),
+            const ListTile(
+              leading: Icon(Icons.info_outline),
+              title: Text('关于'),
               subtitle: Text(
                 '${AppConstants.appName} v${AppConstants.version}\n'
                 'Flutter 赛车游戏 · Android + Windows',

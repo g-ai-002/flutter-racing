@@ -166,7 +166,7 @@ class ItemManager {
         }
         final dx = k.x - box.x;
         final dy = k.y - box.y;
-        final r = boxRadius + KartPhysics.kartRadius;
+        const r = boxRadius + KartPhysics.kartRadius;
         if (dx * dx + dy * dy < r * r) {
           k.item = randomItem(rng);
           box.active = false;
@@ -212,7 +212,6 @@ class ItemManager {
               x: k.x,
               y: k.y,
               kind: 2,
-              life: 0.6,
               size: 9,
               vx: math.cos(i * math.pi / 4) * 90,
               vy: math.sin(i * math.pi / 4) * 90,
@@ -324,7 +323,7 @@ class ItemManager {
         }
         final dx = k.x - p.x;
         final dy = k.y - p.y;
-        final r = peelRadius + KartPhysics.kartRadius;
+        const r = peelRadius + KartPhysics.kartRadius;
         if (dx * dx + dy * dy < r * r && k.speed > 30) {
           spinOut(k, race);
           dead.add(p);

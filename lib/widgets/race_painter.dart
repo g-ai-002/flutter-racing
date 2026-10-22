@@ -244,7 +244,7 @@ class RacePainter extends CustomPainter {
 
     // 车轮（前轮带转向视觉）
     final wheel = Paint()..color = const Color(0xFF212121);
-    final wheelRect = const Rect.fromCenter(
+    final wheelRect = Rect.fromCenter(
       center: Offset.zero,
       width: 3.4,
       height: 6.4,

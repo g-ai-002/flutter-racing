@@ -53,7 +53,6 @@ class CharacterCatalog {
       colorValue: 0xFF43A047,
       topSpeedMul: 0.95,
       accelMul: 1.1,
-      handlingMul: 1.0,
     ),
     RacerCharacter(
       id: 'gold',

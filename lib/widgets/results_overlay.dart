@@ -121,7 +121,8 @@ class _ResultRow extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 12,
-            backgroundColor: _placeColors[(row.place - 1) % _placeColors.length],
+            backgroundColor:
+                RaceResultsOverlay._placeColors[(row.place - 1) % RaceResultsOverlay._placeColors.length],
             child: Text(
               '${row.place}',
               style: const TextStyle(

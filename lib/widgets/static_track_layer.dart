@@ -287,7 +287,7 @@ void _drawTree(ui.Canvas canvas, math.Random rng) {
   );
   final green = ui.Paint()..color = const ui.Color(0xFF2E7D32);
   final darkGreen = ui.Paint()..color = const ui.Color(0xFF1B5E20);
-  canvas.drawCircle(ui.Offset(-5, -16), 7.5, darkGreen);
+  canvas.drawCircle(const ui.Offset(-5, -16), 7.5, darkGreen);
   canvas.drawCircle(const ui.Offset(5, -16), 7.5, darkGreen);
   canvas.drawCircle(const ui.Offset(0, -22), 8, green);
 }

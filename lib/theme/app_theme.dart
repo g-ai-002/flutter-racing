@@ -19,17 +19,14 @@ const _darkOutline = Color(0xFF333333);
 ThemeData buildLightTheme({String? fontFamily}) {
   const colorScheme = ColorScheme.light(
     primary: _primary,
-    onPrimary: Colors.white,
     primaryContainer: Color(0xFFBBDEFB),
     onPrimaryContainer: Color(0xFF0D47A1),
     secondary: Color(0xFFFFC107),
     onSecondary: Color(0xFF212121),
-    surface: _lightSurface,
     onSurface: _lightOnSurface,
     surfaceContainerHighest: _lightSurfaceVariant,
     onSurfaceVariant: _lightOnSurfaceVariant,
     error: Color(0xFFE53935),
-    onError: Colors.white,
     outline: _lightOutline,
     surfaceTint: Colors.transparent,
   );

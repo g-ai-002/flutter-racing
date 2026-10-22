@@ -59,9 +59,9 @@ void main() {
     final k = makeKart(0)..item = ItemType.nitro;
     final state = makeState([k]);
     // 放到底部大直道（s=200，滨海公路起跑直道段）
-    final p = track.posAtS(200);
-    k.x = p.dx;
-    k.y = p.dy;
+    final startPoint = track.posAtS(200);
+    k.x = startPoint.dx;
+    k.y = startPoint.dy;
     k.angle = track.tangentAngleAt(100);
     k.centerIndex = 100;
     expect(AiDriver.wantsUseItem(k, state, track), isTrue);
