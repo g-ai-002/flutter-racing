@@ -87,20 +87,31 @@ class RacePainter extends CustomPainter {
     _paintParticles(canvas);
     canvas.restore();
 
+    if (staticLayer == null) {
+      _paintWorldNotice(canvas, size);
+    }
     _paintSpeedLines(canvas, size);
+  }
+
+  /// 静态赛道层构建失败时，在屏幕空间给出明确提示（避免无提示黑屏）
+  void _paintWorldNotice(Canvas canvas, Size size) {
+    final tp = TextPainter(
+      text: const TextSpan(
+        text: '赛道资源不可用 · 请到 设置 → 查看日志 反馈',
+        style: TextStyle(color: Colors.white70, fontSize: 14),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: size.width - 48);
+    tp.paint(canvas, const Offset(24, 24));
   }
 
   void _paintStatic(Canvas canvas, Size size) {
     final layer = staticLayer;
     if (layer != null) {
-      canvas.drawImage(
-        layer.image,
-        layer.origin,
-        Paint()..filterQuality = FilterQuality.low,
-      );
+      canvas.drawPicture(layer.picture);
       return;
     }
-    // 静态层尚未生成：主题地面色兜底
+    // 静态层构建失败：主题地面色兜底
     final ground = switch (trackDef.theme) {
       TrackTheme.seaside => const Color(0xFF7CB342),
       TrackTheme.desert => const Color(0xFFEDD892),

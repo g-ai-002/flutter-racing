@@ -4,13 +4,15 @@ import 'dart:ui' as ui;
 import '../engine/track_geometry.dart';
 import '../models/track_def.dart';
 
-/// 预渲染的静态赛道层（地面/路面/路缘/格纹起跑线/装饰）。
-/// [origin] 为图像左上角对应的世界坐标，绘制时据此平移。
+/// 静态赛道层（地面/路面/路缘/格纹起跑线/装饰）。
+///
+/// 以世界坐标录制为矢量 [ui.Picture]，比赛画面逐帧用 `drawPicture` 回放。
+/// 相比"离屏位图（Picture.toImage）+ drawImage"方案，不依赖异步栅格化与
+/// 位图绘制——后者在 Windows 上曾导致静默黑屏（无 Dart 异常、日志为空）。
 class StaticTrackLayer {
-  final ui.Image image;
-  final ui.Offset origin;
+  final ui.Picture picture;
 
-  const StaticTrackLayer({required this.image, required this.origin});
+  const StaticTrackLayer(this.picture);
 }
 
 class _Palette {
@@ -60,11 +62,8 @@ class _Palette {
   }
 }
 
-/// 生成静态赛道层（异步：Picture.toImage）。
-Future<StaticTrackLayer> buildStaticTrackLayer(
-  TrackDef def,
-  TrackGeometry track,
-) async {
+/// 构建静态赛道层（同步：仅录制矢量指令，不做栅格化）。
+StaticTrackLayer buildStaticTrackLayer(TrackDef def, TrackGeometry track) {
   const margin = 150.0;
   var minX = double.infinity;
   var minY = double.infinity;
@@ -76,29 +75,31 @@ Future<StaticTrackLayer> buildStaticTrackLayer(
     if (p.dx > maxX) maxX = p.dx;
     if (p.dy > maxY) maxY = p.dy;
   }
-  final origin = ui.Offset(minX - margin, minY - margin);
-  final width = (maxX - minX + margin * 2).ceil();
-  final height = (maxY - minY + margin * 2).ceil();
+  final bounds = ui.Rect.fromLTRB(
+    minX - margin,
+    minY - margin,
+    maxX + margin,
+    maxY + margin,
+  );
 
   final palette = _Palette.of(def.theme);
   final recorder = ui.PictureRecorder();
   final canvas = ui.Canvas(recorder);
-  canvas.translate(-origin.dx, -origin.dy);
 
   // 1. 地面
-  canvas.drawRect(
-    ui.Rect.fromLTWH(origin.dx, origin.dy, width.toDouble(), height.toDouble()),
-    ui.Paint()..color = palette.ground,
-  );
+  canvas.drawRect(bounds, ui.Paint()..color = palette.ground);
 
   // 2. 地面斑块
   final rng = math.Random(def.id.hashCode & 0x7fffffff);
   final groundPaint = ui.Paint()..color = palette.patch;
   for (var i = 0; i < 260; i++) {
-    final px = origin.dx + rng.nextDouble() * width;
-    final py = origin.dy + rng.nextDouble() * height;
+    final px = bounds.left + rng.nextDouble() * bounds.width;
+    final py = bounds.top + rng.nextDouble() * bounds.height;
     final r = 8 + rng.nextDouble() * 26;
-    canvas.drawOval(ui.Rect.fromCircle(center: ui.Offset(px, py), radius: r), groundPaint);
+    canvas.drawOval(
+      ui.Rect.fromCircle(center: ui.Offset(px, py), radius: r),
+      groundPaint,
+    );
   }
 
   // 3. 路面：外描边 + 沥青主体
@@ -143,7 +144,10 @@ Future<StaticTrackLayer> buildStaticTrackLayer(
     final paint = ui.Paint()..color = phase == 0 ? palette.curbA : palette.curbB;
     for (final side in const [1.0, -1.0]) {
       canvas.save();
-      canvas.translate(p.dx + nx * side * (track.halfWidth + 3), p.dy + ny * side * (track.halfWidth + 3));
+      canvas.translate(
+        p.dx + nx * side * (track.halfWidth + 3),
+        p.dy + ny * side * (track.halfWidth + 3),
+      );
       canvas.rotate(ang);
       canvas.drawRect(curbTickSize, paint);
       canvas.restore();
@@ -189,7 +193,10 @@ Future<StaticTrackLayer> buildStaticTrackLayer(
       canvas.rotate(ang0);
       canvas.drawRect(
         ui.Rect.fromCenter(center: ui.Offset.zero, width: 8, height: 8),
-        ui.Paint()..color = (row + col) % 2 == 0 ? const ui.Color(0xFFFAFAFA) : const ui.Color(0xFF212121),
+        ui.Paint()
+          ..color = (row + col) % 2 == 0
+              ? const ui.Color(0xFFFAFAFA)
+              : const ui.Color(0xFF212121),
       );
       canvas.restore();
       col++;
@@ -208,12 +215,9 @@ Future<StaticTrackLayer> buildStaticTrackLayer(
   }
 
   // 7. 主题装饰（树/仙人掌/雪松/岩石），避开路面
-  _drawDecorations(canvas, def, track, rng, origin, width, height);
+  _drawDecorations(canvas, def, track, rng, bounds);
 
-  final picture = recorder.endRecording();
-  final image = await picture.toImage(width, height);
-  picture.dispose();
-  return StaticTrackLayer(image: image, origin: origin);
+  return StaticTrackLayer(recorder.endRecording());
 }
 
 void _drawDecorations(
@@ -221,9 +225,7 @@ void _drawDecorations(
   TrackDef def,
   TrackGeometry track,
   math.Random rng,
-  ui.Offset origin,
-  int width,
-  int height,
+  ui.Rect bounds,
 ) {
   const decorCount = 90;
   var placed = 0;
@@ -242,10 +244,10 @@ void _drawDecorations(
     final py = base.dy + ny * side * dist;
 
     // 画布内 & 不贴路面
-    if (px < origin.dx + 16 ||
-        px > origin.dx + width - 16 ||
-        py < origin.dy + 16 ||
-        py > origin.dy + height - 16) {
+    if (px < bounds.left + 16 ||
+        px > bounds.right - 16 ||
+        py < bounds.top + 16 ||
+        py > bounds.bottom - 16) {
       continue;
     }
     var tooClose = false;
@@ -270,9 +272,13 @@ void _drawDecorations(
       case TrackTheme.seaside:
         _drawTree(canvas, rng);
       case TrackTheme.desert:
-        rng.nextDouble() < 0.6 ? _drawCactus(canvas, rng) : _drawRock(canvas, rng);
+        rng.nextDouble() < 0.6
+            ? _drawCactus(canvas, rng)
+            : _drawRock(canvas, rng);
       case TrackTheme.alpine:
-        rng.nextDouble() < 0.7 ? _drawPine(canvas, rng) : _drawRock(canvas, rng);
+        rng.nextDouble() < 0.7
+            ? _drawPine(canvas, rng)
+            : _drawRock(canvas, rng);
     }
     canvas.restore();
     placed++;

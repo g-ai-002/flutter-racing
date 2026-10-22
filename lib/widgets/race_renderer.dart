@@ -33,31 +33,32 @@ class _RaceRendererState extends State<RaceRenderer> {
   double _camY = 0;
   bool _camInit = false;
   StaticTrackLayer? _layer;
-  bool _layerRequested = false;
+  bool _layoutLogged = false;
 
   @override
   void initState() {
     super.initState();
-    _ensureLayer();
+    _buildLayer();
   }
 
-  Future<void> _ensureLayer() async {
-    if (_layerRequested) {
-      return;
-    }
-    _layerRequested = true;
+  /// 同步构建矢量赛道层；失败时记录日志并走兜底绘制
+  void _buildLayer() {
     try {
       final engine = widget.race.engine;
-      final layer = await buildStaticTrackLayer(engine.trackDef, engine.track);
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _layer = layer;
-      });
-    } catch (e) {
-      LogService.warning('静态赛道层生成失败: $e');
+      _layer = buildStaticTrackLayer(engine.trackDef, engine.track);
+      LogService.info(
+        '静态赛道层已构建（矢量回放）: ${engine.trackDef.name}, '
+        '采样点=${engine.track.pointCount}',
+      );
+    } catch (e, stack) {
+      LogService.error('静态赛道层构建失败', e, stack);
     }
+  }
+
+  @override
+  void dispose() {
+    _layer?.picture.dispose();
+    super.dispose();
   }
 
   void _updateCamera(KartState player) {
@@ -73,6 +74,23 @@ class _RaceRendererState extends State<RaceRenderer> {
     _camY += (aheadY - _camY) * 0.14;
   }
 
+  void _logLayoutOnce(
+    Size size,
+    double zoom,
+    KartState player,
+  ) {
+    if (_layoutLogged) {
+      return;
+    }
+    _layoutLogged = true;
+    LogService.info(
+      '比赛画面布局: ${size.width.toStringAsFixed(0)}x'
+      '${size.height.toStringAsFixed(0)}, zoom=${zoom.toStringAsFixed(2)}, '
+      '玩家=(${player.x.toStringAsFixed(1)}, ${player.y.toStringAsFixed(1)}) '
+      '朝向=${player.angle.toStringAsFixed(2)}',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -83,6 +101,7 @@ class _RaceRendererState extends State<RaceRenderer> {
         final player = state.player;
         final size = MediaQuery.sizeOf(context);
         final zoom = (size.height / 430).clamp(0.8, 2.0).toDouble();
+        _logLayoutOnce(size, zoom, player);
         _updateCamera(player);
         final bestLap = race.storage.bestLapFor(race.engine.trackDef.id);
 
