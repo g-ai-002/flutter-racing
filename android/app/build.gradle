@@ -61,7 +61,7 @@ android {
         }
     }
 
-    // 统一签名配置：debug 和 release 使用同一把长周期密钥，避免"签名不一致"错误
+    // 统一签名配置：debug 和 release 使用同一个长期密钥，避免"签名不一致"错误
     signingConfigs {
         release {
             keyAlias keystoreProperties['keyAlias']
