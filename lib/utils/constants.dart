@@ -2,7 +2,7 @@ class AppConstants {
   AppConstants._();
 
   static const String appName = '极速卡丁车';
-  static const String version = '0.1.2';
+  static const String version = '0.1.3';
 
   /// 每场比赛圈数
   static const int lapsPerRace = 3;
