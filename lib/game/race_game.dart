@@ -87,16 +87,25 @@ class RaceGame extends FlameGame<RaceWorld> with KeyboardEvents {
   @override
   Color backgroundColor() => const Color(0xFF11151A);
 
+  /// 静态赛道层按赛道缓存：同一条赛道重开一局时无需重复录制矢量指令。
+  static final Map<String, StaticTrackLayer> _staticLayerCache = {};
+
   @override
   Future<void> onLoad() async {
-    try {
-      _staticLayer = buildStaticTrackLayer(trackDef, provider.engine.track);
-      LogService.info(
-        '静态赛道层已构建（矢量回放）: ${trackDef.name}, '
-        '采样点=${provider.engine.track.pointCount}',
-      );
-    } catch (e, stack) {
-      LogService.error('静态赛道层构建失败', e, stack);
+    final cached = _staticLayerCache[trackDef.id];
+    if (cached != null) {
+      _staticLayer = cached;
+    } else {
+      try {
+        _staticLayer = buildStaticTrackLayer(trackDef, provider.engine.track);
+        _staticLayerCache[trackDef.id] = _staticLayer!;
+        LogService.info(
+          '静态赛道层已构建（矢量回放）: ${trackDef.name}, '
+          '采样点=${provider.engine.track.pointCount}',
+        );
+      } catch (e, stack) {
+        LogService.error('静态赛道层构建失败', e, stack);
+      }
     }
 
     await world.addAll([
