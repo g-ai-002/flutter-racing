@@ -1,120 +1,49 @@
-import 'package:flutter/material.dart';
+import 'dart:ui';
+
+import 'package:flame/components.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_racing/models/game_enums.dart';
-import 'package:flutter_racing/models/track_def.dart';
-import 'package:flutter_racing/providers/race_provider.dart';
-import 'package:flutter_racing/services/storage_service.dart';
-import 'package:flutter_racing/widgets/touch_controls.dart';
-
-Future<RaceProvider> _makeRace() async {
-  final storage = await StorageService.instance;
-  return RaceProvider(
-    storage: storage,
-    trackDef: TrackCatalog.all[0],
-    mode: RaceMode.itemRace,
-    playerCharacterIndex: 0,
-    autoThrottle: true,
-  );
-}
-
-Widget _wrap(Widget child) {
-  return MaterialApp(home: Scaffold(body: child));
-}
+import 'package:flutter_racing/game/components/touch_controls_component.dart';
 
 void main() {
-  testWidgets('按住按钮触发按压回调，松开触发释放', (tester) async {
-    TestWidgetsFlutterBinding.ensureInitialized();
-    SharedPreferences.setMockInitialValues({});
-    var starts = 0;
-    var ends = 0;
-    await tester.pumpWidget(
-      _wrap(
-        Center(
-          child: HoldButton(
-            key: const Key('btn_hold'),
-            label: '漂移',
-            size: 96,
-            onPressStart: () => starts++,
-            onPressEnd: () => ends++,
-          ),
-        ),
-      ),
-    );
+  group('TouchLayout', () {
+    const size = Vector2(800, 600);
 
-    final gesture = await tester.startGesture(
-      tester.getCenter(find.byKey(const Key('btn_hold'))),
-    );
-    await tester.pump();
-    expect(starts, 1);
-    expect(ends, 0);
+    test('所有按钮完整落在屏幕内', () {
+      const layout = TouchLayout(size);
+      for (final action in TouchAction.values) {
+        final rect = layout.rectFor(action);
+        expect(rect.left, greaterThanOrEqualTo(0.0));
+        expect(rect.top, greaterThanOrEqualTo(0.0));
+        expect(rect.right, lessThanOrEqualTo(size.x));
+        expect(rect.bottom, lessThanOrEqualTo(size.y));
+      }
+    });
 
-    await gesture.up();
-    await tester.pump();
-    expect(starts, 1);
-    expect(ends, 1);
-  });
+    test('按钮之间不重叠', () {
+      const layout = TouchLayout(size);
+      final actions = TouchAction.values;
+      for (var i = 0; i < actions.length; i++) {
+        for (var j = i + 1; j < actions.length; j++) {
+          final a = layout.rectFor(actions[i]);
+          final b = layout.rectFor(actions[j]);
+          expect(a.overlaps(b), isFalse, reason: '${actions[i]} 与 ${actions[j]} 重叠');
+        }
+      }
+    });
 
-  testWidgets('组件销毁后迟到的抬起事件不崩溃', (tester) async {
-    TestWidgetsFlutterBinding.ensureInitialized();
-    SharedPreferences.setMockInitialValues({});
-    var starts = 0;
-    var ends = 0;
-    await tester.pumpWidget(
-      _wrap(
-        Center(
-          child: HoldButton(
-            key: const Key('btn_hold'),
-            label: '漂移',
-            size: 96,
-            onPressStart: () => starts++,
-            onPressEnd: () => ends++,
-          ),
-        ),
-      ),
-    );
+    test('点击命中对应按钮，空白区域不命中', () {
+      const layout = TouchLayout(size);
+      for (final action in TouchAction.values) {
+        expect(layout.hitTest(layout.rectFor(action).center), action);
+      }
+      expect(layout.hitTest(const Offset(400, 100)), isNull);
+    });
 
-    final gesture = await tester.startGesture(
-      tester.getCenter(find.byKey(const Key('btn_hold'))),
-    );
-    await tester.pump();
-    expect(starts, 1);
-
-    // 按住期间换树销毁组件，迟到的抬起事件必须被安全忽略
-    await tester.pumpWidget(const MaterialApp(home: SizedBox()));
-    await gesture.up();
-    await tester.pump();
-    expect(starts, 1);
-  });
-
-  testWidgets('TouchControls 渲染全部控制按钮', (tester) async {
-    TestWidgetsFlutterBinding.ensureInitialized();
-    SharedPreferences.setMockInitialValues({});
-    final race = await _makeRace();
-    await tester.pumpWidget(_wrap(TouchControls(race: race)));
-
-    expect(find.byKey(const Key('btn_left')), findsOneWidget);
-    expect(find.byKey(const Key('btn_right')), findsOneWidget);
-    expect(find.byKey(const Key('btn_drift')), findsOneWidget);
-    expect(find.byKey(const Key('btn_brake')), findsOneWidget);
-    expect(find.text('道具'), findsOneWidget);
-    race.dispose();
-  });
-
-  testWidgets('点击道具按钮使用玩家道具', (tester) async {
-    TestWidgetsFlutterBinding.ensureInitialized();
-    SharedPreferences.setMockInitialValues({});
-    final race = await _makeRace();
-    race.state.phase = RacePhase.running;
-    race.state.player.item = ItemType.nitro;
-    final speedBefore = race.state.player.speed;
-
-    await tester.pumpWidget(_wrap(TouchControls(race: race)));
-    await tester.tap(find.text('道具'));
-    await tester.pump();
-
-    expect(race.state.player.item, isNull);
-    expect(race.state.player.speed, greaterThan(speedBefore));
-    race.dispose();
+    test('控制区随屏幕尺寸缩放', () {
+      const small = TouchLayout(Vector2(480, 320));
+      final drift = small.rectFor(TouchAction.drift);
+      expect(drift.right, lessThanOrEqualTo(480));
+      expect(drift.bottom, lessThanOrEqualTo(320));
+    });
   });
 }

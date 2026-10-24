@@ -1,24 +1,34 @@
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
+import '../game/overlays/race_pause_overlay.dart';
 import '../game/race_game.dart';
 import '../models/game_enums.dart';
 import '../providers/race_provider.dart';
 import '../services/log_service.dart';
 import 'hud.dart';
-import 'static_track_layer.dart';
-import 'touch_controls.dart';
+import 'results_overlay.dart';
 
-/// 比赛画面组合：Flame 世界画布 + HUD + 触屏控制。
+/// 比赛画面组合：Flame 世界画布（含输入与浮层）+ Flutter HUD。
 class RaceRenderer extends StatefulWidget {
   final RaceProvider race;
   final bool isMobile;
+  final FocusNode focusNode;
   final VoidCallback? onPausePressed;
+  final VoidCallback onRestart;
+  final VoidCallback onChangeSetup;
+  final VoidCallback onExit;
+  final VoidCallback onResumeRequested;
 
   const RaceRenderer({
     super.key,
     required this.race,
     required this.isMobile,
+    required this.focusNode,
+    required this.onRestart,
+    required this.onChangeSetup,
+    required this.onExit,
+    required this.onResumeRequested,
     this.onPausePressed,
   });
 
@@ -28,38 +38,20 @@ class RaceRenderer extends StatefulWidget {
 
 class _RaceRendererState extends State<RaceRenderer> {
   RaceGame? _game;
-  StaticTrackLayer? _layer;
   bool _layoutLogged = false;
 
   @override
   void initState() {
     super.initState();
-    _buildLayer();
     _game = RaceGame(
       provider: widget.race,
       trackDef: widget.race.engine.trackDef,
-      staticLayer: _layer,
+      isMobile: widget.isMobile,
+      onPauseRequested: widget.onPausePressed ?? () {},
+      onRestart: widget.onRestart,
+      onChangeSetup: widget.onChangeSetup,
+      onExit: widget.onExit,
     );
-  }
-
-  /// 同步构建矢量赛道层；失败时记录日志并走纯色地面兜底
-  void _buildLayer() {
-    try {
-      final engine = widget.race.engine;
-      _layer = buildStaticTrackLayer(engine.trackDef, engine.track);
-      LogService.info(
-        '静态赛道层已构建（矢量回放）: ${engine.trackDef.name}, '
-        '采样点=${engine.track.pointCount}',
-      );
-    } catch (e, stack) {
-      LogService.error('静态赛道层构建失败', e, stack);
-    }
-  }
-
-  @override
-  void dispose() {
-    _layer?.picture.dispose();
-    super.dispose();
   }
 
   void _logLayoutOnce(Size size) {
@@ -80,24 +72,62 @@ class _RaceRendererState extends State<RaceRenderer> {
   @override
   Widget build(BuildContext context) {
     final game = _game;
+    if (game == null) {
+      return const SizedBox.expand();
+    }
+    _logLayoutOnce(MediaQuery.sizeOf(context));
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Positioned.fill(
+          child: GameWidget<RaceGame>(
+            game: game,
+            focusNode: widget.focusNode,
+            overlayBuilderMap: {
+              RaceGame.pauseOverlayId: (context, _) => RacePauseOverlay(
+                    race: widget.race,
+                    onResume: widget.onResumeRequested,
+                    onRestart: widget.onRestart,
+                    onExit: widget.onExit,
+                  ),
+              RaceGame.resultsOverlayId: (context, _) => RaceResultsOverlay(
+                    race: widget.race,
+                    onRestart: widget.onRestart,
+                    onChangeSetup: widget.onChangeSetup,
+                    onExit: widget.onExit,
+                  ),
+              RaceGame.countdownOverlayId: (context, _) => AnimatedBuilder(
+                    animation: widget.race,
+                    builder: (context, _) =>
+                        CountdownOverlay(state: widget.race.state),
+                  ),
+              RaceGame.wrongWayOverlayId: (context, _) =>
+                  const WrongWayBanner(),
+              RaceGame.finalLapOverlayId: (context, _) => const FinalLapBanner(),
+            },
+          ),
+        ),
+        Positioned.fill(child: _buildHud()),
+      ],
+    );
+  }
+
+  Widget _buildHud() {
     return AnimatedBuilder(
       animation: widget.race,
       builder: (context, _) {
         final race = widget.race;
         final state = race.state;
+        if (state.phase == RacePhase.finished || race.paused) {
+          return const SizedBox.shrink();
+        }
         final player = state.player;
-        final size = MediaQuery.sizeOf(context);
-        _logLayoutOnce(size);
         final bestLap = race.storage.bestLapFor(race.engine.trackDef.id);
 
         return Stack(
           fit: StackFit.expand,
           children: [
-            Positioned.fill(
-              child: game == null
-                  ? const SizedBox.expand()
-                  : GameWidget<RaceGame>(game: game),
-            ),
             Positioned(
               top: 0,
               left: 0,
@@ -109,25 +139,29 @@ class _RaceRendererState extends State<RaceRenderer> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (state.mode != RaceMode.timeTrial)
-                        StandingsPanel(state: state),
+                        IgnorePointer(child: StandingsPanel(state: state)),
                       Expanded(
-                        child: Center(
-                          child: LapPanel(state: state, bestLap: bestLap),
+                        child: IgnorePointer(
+                          child: Center(
+                            child: LapPanel(state: state, bestLap: bestLap),
+                          ),
                         ),
                       ),
                       _pauseButton(),
                       const SizedBox(width: 10),
-                      SizedBox(
-                        width: 110,
-                        height: 110,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            color: Colors.black.withValues(alpha: 0.35),
-                            child: CustomPaint(
-                              painter: MiniMapPainter(
-                                track: race.engine.track,
-                                state: state,
+                      IgnorePointer(
+                        child: SizedBox(
+                          width: 110,
+                          height: 110,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              color: Colors.black.withValues(alpha: 0.35),
+                              child: CustomPaint(
+                                painter: MiniMapPainter(
+                                  track: race.engine.track,
+                                  state: state,
+                                ),
                               ),
                             ),
                           ),
@@ -141,9 +175,11 @@ class _RaceRendererState extends State<RaceRenderer> {
             Positioned(
               left: 12,
               bottom: 12,
-              child: SpeedometerPanel(
-                speed: player.speed,
-                boost: player.boostTimer > 0,
+              child: IgnorePointer(
+                child: SpeedometerPanel(
+                  speed: player.speed,
+                  boost: player.boostTimer > 0,
+                ),
               ),
             ),
             if (race.lastError != null)
@@ -184,13 +220,11 @@ class _RaceRendererState extends State<RaceRenderer> {
                   ),
                 ),
               ),
-            if (widget.isMobile)
-              TouchControls(race: race)
-            else ...[
+            if (!widget.isMobile) ...[
               Positioned(
                 right: 16,
                 bottom: 16,
-                child: ItemSlotPanel(item: player.item),
+                child: IgnorePointer(child: ItemSlotPanel(item: player.item)),
               ),
               if (state.phase == RacePhase.countdown)
                 const Positioned(
@@ -200,9 +234,6 @@ class _RaceRendererState extends State<RaceRenderer> {
                   child: Center(child: DesktopKeysHint()),
                 ),
             ],
-            CountdownOverlay(state: state),
-            if (player.wrongWay) const WrongWayBanner(),
-            if (race.finalLapBannerVisible) const FinalLapBanner(),
           ],
         );
       },
