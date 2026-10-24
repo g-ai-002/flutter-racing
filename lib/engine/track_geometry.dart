@@ -38,6 +38,9 @@ class TrackGeometry {
   late final List<double> curvature;
   late final List<int> checkpoints;
 
+  /// 赛道采样点的包围盒（世界坐标），供小地图与静态赛道层复用。
+  late final Rect bounds;
+
   TrackGeometry.fromDef(this.def) {
     halfWidth = def.halfWidth;
     _build();
@@ -63,6 +66,7 @@ class TrackGeometry {
     points = _resampleLoop(dense);
     pointCount = points.length;
     totalLength = spacing * pointCount;
+    bounds = _computeBounds();
     curvature = _buildCurvature();
     checkpoints = List<int>.generate(
       AppConstants.checkpointCount,
@@ -111,6 +115,20 @@ class TrackGeometry {
       out.removeLast();
     }
     return out;
+  }
+
+  Rect _computeBounds() {
+    var minX = double.infinity;
+    var minY = double.infinity;
+    var maxX = double.negativeInfinity;
+    var maxY = double.negativeInfinity;
+    for (final p in points) {
+      if (p.dx < minX) minX = p.dx;
+      if (p.dy < minY) minY = p.dy;
+      if (p.dx > maxX) maxX = p.dx;
+      if (p.dy > maxY) maxY = p.dy;
+    }
+    return Rect.fromLTRB(minX, minY, maxX, maxY);
   }
 
   List<double> _buildCurvature() {

@@ -32,24 +32,15 @@ class MiniMapPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    var minX = double.infinity;
-    var minY = double.infinity;
-    var maxX = double.negativeInfinity;
-    var maxY = double.negativeInfinity;
-    for (final p in track.points) {
-      if (p.dx < minX) minX = p.dx;
-      if (p.dy < minY) minY = p.dy;
-      if (p.dx > maxX) maxX = p.dx;
-      if (p.dy > maxY) maxY = p.dy;
-    }
-    final w = math.max(1.0, maxX - minX);
-    final h = math.max(1.0, maxY - minY);
+    final bounds = track.bounds;
+    final w = math.max(1.0, bounds.width);
+    final h = math.max(1.0, bounds.height);
     final scale = math.min(
       (size.width - 14) / w,
       (size.height - 14) / h,
     );
-    final offsetX = (size.width - w * scale) / 2 - minX * scale;
-    final offsetY = (size.height - h * scale) / 2 - minY * scale;
+    final offsetX = (size.width - w * scale) / 2 - bounds.left * scale;
+    final offsetY = (size.height - h * scale) / 2 - bounds.top * scale;
 
     Offset map(Offset p) {
       return Offset(p.dx * scale + offsetX, p.dy * scale + offsetY);

@@ -65,22 +65,7 @@ class _Palette {
 /// 构建静态赛道层（同步：仅录制矢量指令，不做栅格化）。
 StaticTrackLayer buildStaticTrackLayer(TrackDef def, TrackGeometry track) {
   const margin = 150.0;
-  var minX = double.infinity;
-  var minY = double.infinity;
-  var maxX = double.negativeInfinity;
-  var maxY = double.negativeInfinity;
-  for (final p in track.points) {
-    if (p.dx < minX) minX = p.dx;
-    if (p.dy < minY) minY = p.dy;
-    if (p.dx > maxX) maxX = p.dx;
-    if (p.dy > maxY) maxY = p.dy;
-  }
-  final bounds = ui.Rect.fromLTRB(
-    minX - margin,
-    minY - margin,
-    maxX + margin,
-    maxY + margin,
-  );
+  final bounds = track.bounds.inflate(margin);
 
   final palette = _Palette.of(def.theme);
   final recorder = ui.PictureRecorder();

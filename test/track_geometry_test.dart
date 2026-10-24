@@ -40,6 +40,15 @@ void main() {
         );
       });
 
+      test('包围盒覆盖全部采样点', () {
+        for (final p in track.points) {
+          expect(p.dx, greaterThanOrEqualTo(track.bounds.left));
+          expect(p.dx, lessThanOrEqualTo(track.bounds.right));
+          expect(p.dy, greaterThanOrEqualTo(track.bounds.top));
+          expect(p.dy, lessThanOrEqualTo(track.bounds.bottom));
+        }
+      });
+
       test('project 沿中心线跟踪定位', () {
         var hint = 0;
         // 步进需小于投影搜索窗口（±28 采样点），保证按前一点提示可连续追踪
