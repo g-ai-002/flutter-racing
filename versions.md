@@ -27,7 +27,7 @@
 | 应用内版本号 (`lib/utils/constants.dart`) | 0.2.1                              |
 | Flutter SDK（CI 固定版本）                | 3.47.7                             |
 | Dart SDK 约束                             | >=3.13.5 <4.0.0                    |
-| compileSdk / targetSdk                    | 37 / 37                            |
+| compileSdk / targetSdk                    | 37.2 / 37                          |
 | minSdk                                    | 35                                 |
 | NDK                                       | 30.0.16248370                      |
 | Java (source/target)                      | 21                                 |
