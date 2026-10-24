@@ -1,17 +1,15 @@
-import 'dart:math' as math;
-
+import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
+import '../game/race_game.dart';
 import '../models/game_enums.dart';
-import '../models/kart_state.dart';
 import '../providers/race_provider.dart';
 import '../services/log_service.dart';
 import 'hud.dart';
-import 'race_painter.dart';
 import 'static_track_layer.dart';
 import 'touch_controls.dart';
 
-/// 比赛画面组合：世界画布 + HUD + 触屏控制。
+/// 比赛画面组合：Flame 世界画布 + HUD + 触屏控制。
 class RaceRenderer extends StatefulWidget {
   final RaceProvider race;
   final bool isMobile;
@@ -29,9 +27,7 @@ class RaceRenderer extends StatefulWidget {
 }
 
 class _RaceRendererState extends State<RaceRenderer> {
-  double _camX = 0;
-  double _camY = 0;
-  bool _camInit = false;
+  RaceGame? _game;
   StaticTrackLayer? _layer;
   bool _layoutLogged = false;
 
@@ -39,9 +35,14 @@ class _RaceRendererState extends State<RaceRenderer> {
   void initState() {
     super.initState();
     _buildLayer();
+    _game = RaceGame(
+      provider: widget.race,
+      trackDef: widget.race.engine.trackDef,
+      staticLayer: _layer,
+    );
   }
 
-  /// 同步构建矢量赛道层；失败时记录日志并走兜底绘制
+  /// 同步构建矢量赛道层；失败时记录日志并走纯色地面兜底
   void _buildLayer() {
     try {
       final engine = widget.race.engine;
@@ -61,28 +62,13 @@ class _RaceRendererState extends State<RaceRenderer> {
     super.dispose();
   }
 
-  void _updateCamera(KartState player) {
-    final aheadX = player.x + math.cos(player.angle) * 26;
-    final aheadY = player.y + math.sin(player.angle) * 26;
-    if (!_camInit) {
-      _camX = aheadX;
-      _camY = aheadY;
-      _camInit = true;
-      return;
-    }
-    _camX += (aheadX - _camX) * 0.14;
-    _camY += (aheadY - _camY) * 0.14;
-  }
-
-  void _logLayoutOnce(
-    Size size,
-    double zoom,
-    KartState player,
-  ) {
+  void _logLayoutOnce(Size size) {
     if (_layoutLogged) {
       return;
     }
     _layoutLogged = true;
+    final player = widget.race.state.player;
+    final zoom = (size.height / 430).clamp(0.8, 2.0).toDouble();
     LogService.info(
       '比赛画面布局: ${size.width.toStringAsFixed(0)}x'
       '${size.height.toStringAsFixed(0)}, zoom=${zoom.toStringAsFixed(2)}, '
@@ -93,6 +79,7 @@ class _RaceRendererState extends State<RaceRenderer> {
 
   @override
   Widget build(BuildContext context) {
+    final game = _game;
     return AnimatedBuilder(
       animation: widget.race,
       builder: (context, _) {
@@ -100,26 +87,16 @@ class _RaceRendererState extends State<RaceRenderer> {
         final state = race.state;
         final player = state.player;
         final size = MediaQuery.sizeOf(context);
-        final zoom = (size.height / 430).clamp(0.8, 2.0).toDouble();
-        _logLayoutOnce(size, zoom, player);
-        _updateCamera(player);
+        _logLayoutOnce(size);
         final bestLap = race.storage.bestLapFor(race.engine.trackDef.id);
 
         return Stack(
           fit: StackFit.expand,
           children: [
             Positioned.fill(
-              child: CustomPaint(
-                painter: RacePainter(
-                  state: state,
-                  track: race.engine.track,
-                  trackDef: race.engine.trackDef,
-                  staticLayer: _layer,
-                  camX: _camX,
-                  camY: _camY,
-                  zoom: zoom,
-                ),
-              ),
+              child: game == null
+                  ? const SizedBox.expand()
+                  : GameWidget<RaceGame>(game: game),
             ),
             Positioned(
               top: 0,

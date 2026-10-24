@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 
 import '../engine/kart_physics.dart';
@@ -18,7 +16,6 @@ class RaceProvider extends ChangeNotifier {
   final RaceEngine engine;
   final bool autoThrottle;
 
-  Timer? _loop;
   AudioService? _audio;
   bool paused = false;
 
@@ -62,7 +59,6 @@ class RaceProvider extends ChangeNotifier {
       '开始比赛: ${engine.trackDef.name} (${state.mode.label})',
     );
     _audio = await AudioService.instance;
-    _startLoop();
     notifyListeners();
   }
 
@@ -95,7 +91,6 @@ class RaceProvider extends ChangeNotifier {
     }
     paused = true;
     clearInputs();
-    _stopLoop();
     _audio?.stopEngine();
     _audio?.stopDrift();
     _driftSoundOn = false;
@@ -109,24 +104,11 @@ class RaceProvider extends ChangeNotifier {
     }
     paused = false;
     clearInputs();
-    _startLoop();
     _audio?.startEngine();
     notifyListeners();
   }
 
   // ---- 主循环 ----
-  void _startLoop() {
-    _stopLoop();
-    const tick = Duration(milliseconds: 16);
-    const dt = 16.0 / 1000.0;
-    _loop = Timer.periodic(tick, (_) => _tick(dt));
-  }
-
-  void _stopLoop() {
-    _loop?.cancel();
-    _loop = null;
-  }
-
   KartInput _buildInput() {
     final steer = (_steerRight ? 1.0 : 0.0) - (_steerLeft ? 1.0 : 0.0);
     return KartInput(
@@ -137,7 +119,8 @@ class RaceProvider extends ChangeNotifier {
     );
   }
 
-  void _tick(double dt) {
+  /// 由 Flame 的游戏循环每帧调用，替代原来的 16ms Timer。
+  void advance(double dt) {
     if (paused || state.phase == RacePhase.finished) {
       return;
     }
@@ -157,7 +140,6 @@ class RaceProvider extends ChangeNotifier {
   void _handleCrash(Object error, StackTrace stack) {
     lastError = '$error';
     paused = true;
-    _stopLoop();
     LogService.error('比赛主循环异常，已暂停并保留错误信息', error, stack);
     _audio?.stopEngine();
     _audio?.stopDrift();
@@ -263,7 +245,9 @@ class RaceProvider extends ChangeNotifier {
     final best = storage.bestLapFor(trackId);
     if (best == null || lap < best) {
       storage.setBestLapFor(trackId, lap);
-      LogService.info('刷新最佳圈速: ${engine.trackDef.name} ${lap.toStringAsFixed(2)}s');
+      LogService.info(
+        '刷新最佳圈速: ${engine.trackDef.name} ${lap.toStringAsFixed(2)}s',
+      );
     }
   }
 
@@ -281,7 +265,6 @@ class RaceProvider extends ChangeNotifier {
 
   @override
   void dispose() {
-    _stopLoop();
     final audio = _audio;
     if (audio != null) {
       audio.stopBgm();

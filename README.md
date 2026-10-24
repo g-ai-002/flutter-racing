@@ -37,6 +37,12 @@
 
 ## 版本历史
 
+### v0.2.0 (2026-10-24)
+- 比赛渲染与 60Hz 主循环迁移到 Flame 1.38.2（World + CameraComponent）
+- 静态赛道层改为组件回放矢量 Picture，镜头跟随/旋转/缩放交给相机
+- 胎痕、道具箱、水弹、导弹、卡丁车、粒子与速度线拆为 Flame 组件
+- HUD、小地图、触屏控件与结算/暂停界面保持 Flutter 实现
+
 ### v0.1.0 (2026-10-22)
 - 首个版本：俯视角卡丁车竞速最小可用集
 - 三种比赛模式（道具赛/竞速赛/计时赛）与三条主题赛道
@@ -70,5 +76,5 @@ python .build/generate_audio.py
 - Flutter 3.47.7
 - Provider 状态管理
 - Material 3 设计系统
-- CustomPainter 游戏渲染（无游戏引擎依赖）
+- Flame 1.38.2 游戏引擎（组件化世界 + 相机跟随）
 - audioplayers 音频
