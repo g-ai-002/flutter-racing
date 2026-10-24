@@ -240,7 +240,9 @@ class RaceGame extends FlameGame<RaceWorld> with KeyboardEvents {
     }
 
     camera.viewfinder.position = Vector2(_camX, _camY);
-    camera.viewfinder.angle = -player.angle - math.pi / 2;
+    // viewfinder.angle 与画布旋转方向相反，故用 + 抵消车头角度，
+    // 车头才会始终朝屏幕上方（等价于旧 RacePainter 的 canvas.rotate(-angle - π/2)）。
+    camera.viewfinder.angle = player.angle + math.pi / 2;
     camera.viewfinder.zoom = _zoom;
   }
 }
