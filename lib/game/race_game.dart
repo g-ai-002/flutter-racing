@@ -5,6 +5,7 @@ import 'package:flame/components.dart';
 import 'package:flame/game.dart';
 import 'package:flame/input.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart' show KeyEventResult;
 
 import '../models/game_enums.dart';
 import '../models/track_def.dart';

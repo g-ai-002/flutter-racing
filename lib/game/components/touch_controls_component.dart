@@ -4,6 +4,7 @@ import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
 
+import '../../models/game_enums.dart';
 import '../../providers/race_provider.dart';
 
 /// 触屏按钮种类。

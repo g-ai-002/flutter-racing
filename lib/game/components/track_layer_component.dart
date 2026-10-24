@@ -28,7 +28,7 @@ class TrackLayerComponent extends PositionComponent {
     }
     _ground.color = groundColor;
     canvas.drawRect(
-      Rect.fromLTWH(-4000, -4000, 8000, 8000),
+      const Rect.fromLTWH(-4000, -4000, 8000, 8000),
       _ground,
     );
   }
