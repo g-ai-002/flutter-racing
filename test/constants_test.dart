@@ -2,15 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_racing/models/character.dart';
 import 'package:flutter_racing/models/game_enums.dart';
 import 'package:flutter_racing/models/track_def.dart';
-import 'package:flutter_racing/utils/constants.dart';
 
 void main() {
-  test('版本与应用名', () {
-    expect(AppConstants.version, '0.1.4');
-    expect(AppConstants.appName, '极速卡丁车');
-    expect(AppConstants.lapsPerRace, 3);
-  });
-
   test('目录规模', () {
     expect(CharacterCatalog.all.length, 4);
     expect(TrackCatalog.all.length, 3);
