@@ -27,6 +27,11 @@ class RaceProvider extends ChangeNotifier {
   bool _driftSoundOn = false;
   RacePhase _lastPhase = RacePhase.countdown;
 
+  /// HUD 刷新间隔：比赛画面由 Flame 每帧自绘，Flutter HUD 只需约 10Hz。
+  static const double _hudNotifyInterval = 0.1;
+  double _hudNotifyAccumulator = 0;
+  RacePhase? _lastNotifiedPhase;
+
   // ---- 输入状态机 ----
   bool _steerLeft = false;
   bool _steerRight = false;
@@ -82,6 +87,7 @@ class RaceProvider extends ChangeNotifier {
       return;
     }
     engine.usePlayerItem();
+    notifyListeners();
   }
 
   // ---- 流程 ----
@@ -130,9 +136,21 @@ class RaceProvider extends ChangeNotifier {
       _updateAudioTick();
       _tickCount++;
       _logProgress();
-      notifyListeners();
+      _notifyHud(dt);
     } catch (e, stack) {
       _handleCrash(e, stack);
+    }
+  }
+
+  /// HUD 只需要约 10Hz 的刷新；比赛画面由 Flame 每帧自绘，不受影响。
+  void _notifyHud(double dt) {
+    _hudNotifyAccumulator += dt;
+    final phase = state.phase;
+    if (phase != _lastNotifiedPhase ||
+        _hudNotifyAccumulator >= _hudNotifyInterval) {
+      _lastNotifiedPhase = phase;
+      _hudNotifyAccumulator = 0;
+      notifyListeners();
     }
   }
 
