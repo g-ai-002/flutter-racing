@@ -1,7 +1,7 @@
 # 极速卡丁车 — 项目规划
 
 ## 长期目标
-- 跨 Android + Windows 双平台的卡丁车竞速游戏（类跑跑卡丁车 / QQ飞车玩法）
+- 跨 Android + Windows + Web 三平台的卡丁车竞速游戏（类跑跑卡丁车 / QQ飞车玩法）
 - 精美克制的界面，操作与主流赛车游戏一致
 - 持续可演进：每个版本可独立交付，可观测、可回滚
 
@@ -39,6 +39,21 @@
   - [x] Gitea Actions 增加 `build-web`，只构建 `-web.zip` 并附到 Release
   - [x] README 增加 Web 平台、在线试玩入口与 Web 构建说明
   - [x] 更新 plan/versions（版本号暂不提升）
+
+### v0.3.0 (MINOR)
+
+- **状态**: 已发布 ✅
+- **目标**: 支持 Web 平台并新增 GitHub Pages 多版本在线试玩
+- **任务**:
+  - [x] Web 平台条件导入：日志、文件系统、窗口初始化拆分 `_io` / `_web`
+  - [x] Web 端日志回退到内存，设置页仍可查看
+  - [x] 静态网格/地形烘焙为 `ui.Picture`
+  - [x] 暂停/结算时暂停 Flame 主循环，恢复时重启
+  - [x] 平台自适应操作提示
+  - [x] GitHub Pages 多版本站点与 Gitea Web ZIP 产物
+  - [x] 静态赛道继续复用已有 `ui.Picture` 缓存
+  - [x] 版本号 0.2.1 → 0.3.0
+  - [x] 更新 README/plan/versions
 
 ### v0.2.1 (PATCH)
 - **状态**: 已发布 ✅
