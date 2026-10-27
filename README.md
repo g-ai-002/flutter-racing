@@ -43,6 +43,14 @@
 
 ## 版本历史
 
+### v0.3.0 (2026-10-27)
+
+- 支持 Web 平台与 GitHub Pages 多版本在线试玩
+- 日志、文件系统、窗口初始化改为条件导入，Web 端保留内存日志
+- 静态网格/地形烘焙为 `ui.Picture`，暂停/结算时停掉 Flame 主循环
+- 操作提示按桌面、触屏与浏览器自适应
+- 版本号 0.2.1 → 0.3.0
+
 ### v0.2.1 (2026-10-24)
 - 赛道几何一次性计算采样点包围盒，小地图与静态赛道层复用
 - 静态赛道层按赛道缓存，重开同赛道不再重复录制矢量指令
@@ -115,7 +123,7 @@ flutter run -d chrome
 构建发布版本时 `--base-href` 必须与线上路径一致，否则资源会 404：
 
 ```bash
-flutter build web --release --base-href /flutter-racing/v0.2.1/
+flutter build web --release --base-href /flutter-racing/v0.3.0/
 ```
 
 Web 端没有可写目录，日志退化为内存缓冲（设置页仍可查看、复制），
