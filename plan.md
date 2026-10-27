@@ -22,6 +22,24 @@
 
 ## 版本历史
 
+### Web 平台适配（2026-10-27，未发版）
+- **状态**: 开发完成，待发版 🚧
+- **目标**: 让同一套代码在 Android / Windows / Web 三平台运行，并接入 GitHub Pages 多版本试玩
+- **任务**:
+  - [x] `LogService` 拆为条件导出 + `log_service_io.dart`（落盘）/`log_service_web.dart`（内存），`init` 的 `logRoot` 改为可选
+  - [x] `FileSystemService` 拆为条件导出 + `_io`/`_web`，公开 API 统一为 `getLogRootPath()`/`getUserRootPath()`/`openDirectory()`
+  - [x] 新增 `logging_init.dart/_io/_web`，IO 交 `Directory` 给日志服务，Web 直接内存初始化
+  - [x] 新增 `utils/window_setup.dart/_io/_web`，`window_manager` 只留在 IO 实现
+  - [x] 新增 `utils/platform_info.dart` 与 `utils/game_hints.dart`（桌面/触屏文案集中管理）
+  - [x] `main.dart` 去掉 `dart:io` 与 `window_manager` 直接依赖，字体判断改用 `kIsWeb`/`defaultTargetPlatform`
+  - [x] `race_page.dart`/`settings_page.dart`/`audio_service.dart` 去掉 `dart:io`，Web 隐藏「打开目录」
+  - [x] `RaceGame` 在暂停/结算时 `pauseEngine()`，继续时由 provider 监听 `resumeEngine()`
+  - [x] GitHub Actions 增加 `build-web`：tag 发 `v<版本>/`，其余发 `debug/`，写 gh-pages 与版本索引页
+  - [x] 新增 `.github/pages/index.template.html`（赛车版操作说明）
+  - [x] Gitea Actions 增加 `build-web`，只构建 `-web.zip` 并附到 Release
+  - [x] README 增加 Web 平台、在线试玩入口与 Web 构建说明
+  - [x] 更新 plan/versions（版本号暂不提升）
+
 ### v0.2.1 (PATCH)
 - **状态**: 已发布 ✅
 - **目标**: 比赛画面渲染性能优化

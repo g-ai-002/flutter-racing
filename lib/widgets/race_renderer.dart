@@ -234,6 +234,14 @@ class _RaceRendererState extends State<RaceRenderer> {
                   child: Center(child: DesktopKeysHint()),
                 ),
             ],
+            // 触屏端在倒计时期间给一条手势提示，避开底部按钮区域
+            if (widget.isMobile && state.phase == RacePhase.countdown)
+              const Positioned(
+                left: 0,
+                right: 0,
+                bottom: 132,
+                child: Center(child: TouchKeysHint()),
+              ),
           ],
         );
       },

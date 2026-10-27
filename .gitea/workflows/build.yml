@@ -226,8 +226,68 @@ jobs:
           name: ${{ env.APP_NAME }}-${{ needs.metadata.outputs.app_version }}-windows-x86_64.zip
           path: C:/w/${{ env.APP_NAME }}-${{ needs.metadata.outputs.app_version }}-windows-x86_64.zip
 
+  # Gitea 没有 Pages，Web 产物只打包成 ZIP 归档到 Release
+  build-web:
+    needs: [ metadata, test ]
+    runs-on: ubuntu-flutter
+    name: 🌐 构建 Web 产物
+    permissions:
+      contents: read
+    timeout-minutes: 30
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v6
+
+      - name: 📦 安装依赖
+        run: flutter pub get
+
+      - name: 🌐 生成并汉化 Web 平台文件
+        run: |
+          set -euo pipefail
+          flutter create --platforms=web --project-name ${{ needs.metadata.outputs.project_name }} .
+
+          app_desc=$(grep '^description:' pubspec.yaml | sed -E 's/^description:[[:space:]]*//')
+          app_title=$(echo "$app_desc" | sed -E 's/[[:space:]]*-.*$//')
+          echo "📌 站点标题: $app_title"
+          echo "📌 站点描述: $app_desc"
+
+          sed -i "s|<title>.*</title>|<title>${app_title}</title>|" web/index.html
+          sed -i "s|<meta name=\"description\" content=\"[^\"]*\">|<meta name=\"description\" content=\"${app_desc}\">|" web/index.html
+          sed -i "s|<meta name=\"apple-mobile-web-app-title\" content=\"[^\"]*\">|<meta name=\"apple-mobile-web-app-title\" content=\"${app_title}\">|" web/index.html
+          sed -i "s|<meta name=\"theme-color\" content=\"[^\"]*\">|<meta name=\"theme-color\" content=\"#1E88E5\">|" web/index.html
+
+          jq --arg name "$app_title" --arg desc "$app_desc" \
+            '.name = $name | .short_name = $name | .description = $desc | .theme_color = "#1E88E5" | .background_color = "#11151A"' \
+            web/manifest.json > web/manifest.json.tmp
+          mv web/manifest.json.tmp web/manifest.json
+
+          echo "--- 📄 web/manifest.json ---"
+          cat web/manifest.json
+
+      - name: 🔨 构建 Web 产物
+        run: |
+          set -euo pipefail
+          # 归档用默认根路径 base href：解压后在目录内起静态服务器即可访问
+          flutter build web --release
+          du -sh build/web
+
+      - name: 🗜️ 打包 Web 产物
+        run: |
+          set -euo pipefail
+          zip_name="${{ env.APP_NAME }}-${{ needs.metadata.outputs.app_version }}-web.zip"
+          rm -f "$zip_name"
+          ( cd build/web && zip -qr "$GITHUB_WORKSPACE/$zip_name" . )
+          du -sh "$zip_name"
+          unzip -l "$zip_name" | tail -5
+
+      - name: ⬆️ 上传 Web 产物
+        uses: actions/gitea-upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-${{ needs.metadata.outputs.app_version }}-web.zip
+          path: ${{ env.APP_NAME }}-${{ needs.metadata.outputs.app_version }}-web.zip
+
   release:
-    needs: [ metadata, build-android, build-windows ]
+    needs: [ metadata, build-android, build-windows, build-web ]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     name: 🚀 创建 Gitea Release
@@ -250,6 +310,12 @@ jobs:
         uses: actions/gitea-download-artifact@v8
         with:
           name: ${{ env.APP_NAME }}-${{ needs.metadata.outputs.app_version }}-windows-x86_64.zip
+          path: artifacts
+
+      - name: ⬇️ 下载 Web 产物
+        uses: actions/gitea-download-artifact@v8
+        with:
+          name: ${{ env.APP_NAME }}-${{ needs.metadata.outputs.app_version }}-web.zip
           path: artifacts
 
       - name: 📝 生成发布说明

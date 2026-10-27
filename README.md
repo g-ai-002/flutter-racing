@@ -1,6 +1,6 @@
 # 极速卡丁车
 
-类跑跑卡丁车 / QQ飞车玩法的 Flutter 赛车游戏，支持 Android 和 Windows 双平台。
+类跑跑卡丁车 / QQ飞车玩法的 Flutter 赛车游戏，支持 Android、Windows 与 Web 三平台。
 
 ## 功能特性
 
@@ -15,7 +15,10 @@
 - 📊 完整比赛流程：3-2-1 倒计时、实时名次、圈速计时、最佳圈纪录、结算页
 - 🎵 程序化 chiptune 音效：引擎声随速变速、漂移摩擦、道具/爆炸/BGM
 - 🎨 Material 3 设计：浅色/深色主题
-- 📱 跨平台：Android（触屏按钮）+ Windows（键盘）
+- 📱 跨平台：Android（触屏按钮）+ Windows（键盘）+ Web（键盘与触屏按钮自适应）
+- 🧭 平台自适应提示：桌面讲键盘按键，移动端与浏览器讲触屏按钮
+- ⏸️ 暂停与结算时停掉 Flame 主循环，避免后台空转重绘
+- 🕹️ Web 版：发布 tag 自动构建并部署到 GitHub Pages，每个 tag 一个独立版本
 
 ## 操作说明
 
@@ -27,6 +30,9 @@
 | 漂移 | 空格（按住） | 漂移按钮 |
 | 道具 | Ctrl / E | 道具按钮 |
 | 暂停 | P / Esc | 暂停按钮 |
+
+浏览器里打开 Web 版时，键盘与触屏按钮同时可用：桌面浏览器按上表左列操作，
+手机/平板浏览器按右列的触屏按钮操作。
 
 ## 玩法规则
 
@@ -61,6 +67,26 @@
 
 - [GitHub Releases](https://github.com/g-ai-002/flutter-racing/releases)
 
+发布产物包含 Android APK（arm64-v8a）、Windows ZIP（x86-64）与 Web 归档
+（`-web.zip`）。
+
+### 在线试玩
+
+推送到 GitHub 的每个 `v*` tag 都会额外构建 Web 版并发布到 GitHub Pages，
+各版本互不覆盖，历史版本长期保留：
+
+- 版本列表：<https://g-ai-002.github.io/flutter-racing/>
+  （首页顶部是最新正式版本的醒目入口，点开即玩；下方分「正式版本」与
+  「调试版本」两列，历史正式版本从新到旧排列）
+- 预览版：<https://g-ai-002.github.io/flutter-racing/debug/>
+
+非 tag 触发（手动运行 `构建与发布` 工作流）构建出来的站点会发到 `debug/`
+目录，方便合并前验证效果；tag 触发时除了更新 `v<版本>/`，还会把 Web 产物
+`<仓库名>-<版本>-web.zip` 一并归档到 GitHub Release，与 APK、Windows ZIP 放在一起。
+
+Pages 首次使用需在仓库 Settings → Pages 里把发布来源设为 `gh-pages` 分支的
+根目录；之后每次推送 tag 都会自动更新站点（含版本索引页与 `versions.json`）。
+
 ## 开发
 
 ```bash
@@ -77,10 +103,30 @@ flutter run
 python .build/generate_audio.py
 ```
 
+### Web 预览与构建
+
+`web/` 属于平台生成文件，不入库；首次在本地构建 Web 前先生成平台目录：
+
+```bash
+flutter create --platforms=web --project-name flutter_racing .
+flutter run -d chrome
+```
+
+构建发布版本时 `--base-href` 必须与线上路径一致，否则资源会 404：
+
+```bash
+flutter build web --release --base-href /flutter-racing/v0.2.1/
+```
+
+Web 端没有可写目录，日志退化为内存缓冲（设置页仍可查看、复制），
+「打开目录」按钮在浏览器里自动隐藏。
+
 ## 技术栈
 
-- Flutter 3.47.7
+- Flutter 3.47.7（Android / Windows / Web）
 - Provider 状态管理
 - Material 3 设计系统
 - Flame 1.38.2 游戏引擎（组件化世界 + 相机跟随）
 - audioplayers 音频
+- 条件导入隔离平台能力：`dart:io`、`path_provider`、`window_manager` 只进 IO 实现
+- GitHub Pages 多版本站点：每个 tag 一个子目录，根目录自动生成版本索引

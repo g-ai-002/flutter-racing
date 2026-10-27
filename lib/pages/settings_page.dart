@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +6,8 @@ import '../providers/settings_provider.dart';
 import '../services/file_system_service.dart';
 import '../services/log_service.dart';
 import '../utils/constants.dart';
+import '../utils/game_hints.dart';
+import '../utils/platform_info.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -36,18 +36,18 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _loadLogDir() async {
     try {
-      final dir = await FileSystemService.instance.getLogRoot();
+      final path = await FileSystemService.instance.getLogRootPath();
       if (!mounted) {
         return;
       }
-      setState(() => _logDir = dir.path);
+      setState(() => _logDir = path);
     } catch (e, stack) {
       LogService.error('读取日志目录失败', e, stack);
     }
   }
 
-  bool get _canOpenDir =>
-      Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+  /// Web 端没有本地日志目录，「打开目录」只在桌面端显示。
+  bool get _canOpenDir => isDesktopPlatform;
 
   @override
   Widget build(BuildContext context) {
@@ -123,8 +123,7 @@ class _SettingsPageState extends State<SettingsPage> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             child: Text(
-              '漂移小技巧：按住漂移键过弯集气，能量条满一档松开小喷、满两档大喷；'
-              '直道用氮气道具冲刺，弯道前丢香蕉皮防守。',
+              GameHints.settingsTip,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

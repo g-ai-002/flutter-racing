@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui' show Color;
 
 import 'package:flame/components.dart';
 import 'package:flame/game.dart';
@@ -79,6 +78,7 @@ class RaceGame extends FlameGame<RaceWorld> with KeyboardEvents {
   final Set<String> _activeOverlays = {};
 
   bool _initialized = false;
+  bool _enginePaused = false;
   bool _cameraReady = false;
   double _camX = 0;
   double _camY = 0;
@@ -131,6 +131,42 @@ class RaceGame extends FlameGame<RaceWorld> with KeyboardEvents {
     }
     camera.viewfinder.anchor = const Anchor(0.5, 0.58);
     _initialized = true;
+    // 暂停后 Flame 主循环不再调用 update，只能靠 provider 通知恢复。
+    provider.addListener(_handleProviderChange);
+  }
+
+  @override
+  void onRemove() {
+    provider.removeListener(_handleProviderChange);
+    super.onRemove();
+  }
+
+  /// 暂停或已结束时停掉 Flame 主循环，避免每帧空转重绘；恢复时重新开动。
+  void _syncEnginePause() {
+    final shouldPause =
+        provider.paused || provider.state.phase == RacePhase.finished;
+    if (shouldPause == _enginePaused) {
+      return;
+    }
+    _enginePaused = shouldPause;
+    if (shouldPause) {
+      pauseEngine();
+    } else {
+      resumeEngine();
+    }
+  }
+
+  /// provider 通知（继续比赛）时显式恢复主循环。
+  void _handleProviderChange() {
+    if (!_initialized) {
+      return;
+    }
+    if (_enginePaused &&
+        !provider.paused &&
+        provider.state.phase != RacePhase.finished) {
+      _enginePaused = false;
+      resumeEngine();
+    }
   }
 
   @override
@@ -198,6 +234,8 @@ class RaceGame extends FlameGame<RaceWorld> with KeyboardEvents {
     provider.advance(dt);
     _updateCamera(dt);
     _syncOverlays();
+    // 暂停/结束后停掉主循环：update 不再被调用，恢复靠 provider 监听。
+    _syncEnginePause();
     super.update(dt);
   }
 

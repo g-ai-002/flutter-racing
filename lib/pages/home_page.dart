@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/game_enums.dart';
 import '../providers/settings_provider.dart';
 import '../utils/constants.dart';
+import '../utils/game_hints.dart';
 import 'race_setup_page.dart';
 import 'settings_page.dart';
 
@@ -102,12 +103,8 @@ class HomePage extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _instructionRow(theme, '↑/W 或 自动油门', '踩油门加速'),
-              _instructionRow(theme, '← → / A D 或 左右按钮', '转向'),
-              _instructionRow(theme, '空格 / 漂移按钮', '按住漂移集气，松开按档位喷气'),
-              _instructionRow(theme, 'Ctrl / E 或 道具按钮', '使用道具'),
-              _instructionRow(theme, 'P / Esc', '暂停'),
-              _instructionRow(theme, '检查点顺序过线', '防止抄近道，逆行会提示'),
+              for (final row in GameHints.instructions)
+                _instructionRow(theme, row.key, row.desc),
             ],
           ),
           actions: [

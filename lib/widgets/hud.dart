@@ -7,6 +7,7 @@ import '../engine/track_geometry.dart';
 import '../models/character.dart';
 import '../models/game_enums.dart';
 import '../models/race_state.dart';
+import '../utils/game_hints.dart';
 import 'item_icon.dart';
 
 /// 时间格式化：95.34s → '1:35.34'
@@ -487,15 +488,37 @@ class DesktopKeysHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _HintChip(text: GameHints.inGameLine);
+  }
+}
+
+/// 触屏端操作提示（倒计时期间显示）
+class TouchKeysHint extends StatelessWidget {
+  const TouchKeysHint({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return _HintChip(text: GameHints.inGameLine);
+  }
+}
+
+/// 半透明提示条，桌面与触屏共用同一套视觉。
+class _HintChip extends StatelessWidget {
+  const _HintChip({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: const Text(
-        '↑/W 油门 · ←→/AD 转向 · 空格 漂移(集气) · Ctrl/E 道具 · P/Esc 暂停',
-        style: TextStyle(color: Colors.white70, fontSize: 12),
+      child: Text(
+        text,
+        style: const TextStyle(color: Colors.white70, fontSize: 12),
       ),
     );
   }

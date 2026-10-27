@@ -1,6 +1,5 @@
-import 'dart:io' show Platform;
-
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 
 import 'log_service.dart';
 import 'storage_service.dart';
@@ -14,8 +13,10 @@ import 'storage_service.dart';
 class AudioService {
   static AudioService? _instance;
 
-  /// Windows 不启用"循环 + 变速"循环音效（原生层风险规避）
-  static final bool _loopSoundSupported = !Platform.isWindows;
+  /// Windows 不启用"循环 + 变速"循环音效（原生层风险规避）；
+  /// Web 使用 audioplayers 的浏览器实现，可安全启用循环。
+  static final bool _loopSoundSupported =
+      kIsWeb || defaultTargetPlatform != TargetPlatform.windows;
 
   final AudioPlayer _sfxPlayer = AudioPlayer();
   final AudioPlayer _bgmPlayer = AudioPlayer();

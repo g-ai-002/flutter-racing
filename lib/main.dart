@@ -1,20 +1,20 @@
 import 'dart:async';
-import 'dart:io';
-import 'dart:ui' show PlatformDispatcher;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:window_manager/window_manager.dart';
 
 import 'pages/home_page.dart';
 import 'providers/settings_provider.dart';
-import 'services/file_system_service.dart';
 import 'services/log_service.dart';
+import 'services/logging_init.dart';
 import 'services/storage_service.dart';
 import 'theme/app_theme.dart';
 import 'utils/constants.dart';
+import 'utils/platform_info.dart';
+import 'utils/window_setup.dart';
 
 const _startupStepTimeout = Duration(seconds: 10);
 
@@ -36,35 +36,18 @@ void main() {
       return true;
     };
 
-    if (Platform.isWindows) {
-      await _startupStep('Windows 窗口初始化', () async {
-        await windowManager.ensureInitialized();
-        const opts = WindowOptions(
-          size: Size(1280, 720),
-          minimumSize: Size(960, 540),
-          center: true,
-          skipTaskbar: false,
-          titleBarStyle: TitleBarStyle.normal,
-          title: AppConstants.appName,
-        );
-        windowManager.waitUntilReadyToShow(opts, () async {
-          await windowManager.show();
-          await windowManager.focus();
-        });
-      });
-    }
+    await _startupStep('桌面窗口初始化', setupDesktopWindow);
 
     await _startupStep('本地存储初始化', () async {
       await StorageService.instance;
     });
-    await _startupStep('日志服务初始化',
-        () => LogService.init(logRoot: FileSystemService.instance.getLogRoot));
+    await _startupStep('日志服务初始化', initLogging);
 
     LogService.info('应用启动: ${AppConstants.appName} v${AppConstants.version}');
+    LogService.info('运行环境: $platformLabel');
     LogService.info(
-      '运行环境: ${Platform.operatingSystem} ${Platform.operatingSystemVersion}',
+      '日志文件: ${LogService.logFilePath.isEmpty ? '内存模式' : LogService.logFilePath}',
     );
-    LogService.info('日志文件: ${LogService.logFilePath}');
 
     // 赛车游戏全局锁横屏
     await _startupStep('横屏偏好设置', () async {
@@ -146,7 +129,10 @@ class RacingApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fontFamily = Platform.isWindows ? 'Microsoft YaHei UI' : null;
+    final fontFamily =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.windows
+            ? 'Microsoft YaHei UI'
+            : null;
     return ChangeNotifierProvider(
       create: (_) => SettingsProvider(storage),
       child: Consumer<SettingsProvider>(

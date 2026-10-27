@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -7,13 +5,13 @@ import '../models/game_enums.dart';
 import '../models/track_def.dart';
 import '../providers/race_provider.dart';
 import '../services/storage_service.dart';
+import '../utils/platform_info.dart';
 import '../widgets/race_renderer.dart';
 
-/// 桌面端用键盘操控，移动端锁横屏沉浸 + 触屏按钮。
+/// 桌面端用键盘操控，移动端/浏览器锁横屏沉浸 + 触屏按钮。
 ///
 /// 键盘与触屏输入由 [RaceGame] 处理，本页只负责生命周期与导航。
-bool get _isMobile =>
-    !Platform.isWindows && !Platform.isMacOS && !Platform.isLinux;
+bool get _isMobile => !isDesktopPlatform;
 
 class RacePage extends StatefulWidget {
   final TrackDef track;
