@@ -131,7 +131,7 @@ Web 端没有可写目录，日志退化为内存缓冲（设置页仍可查看�
 
 ## 技术栈
 
-- Flutter 3.47.7（Android / Windows / Web）
+- Flutter 3.47.8（Android / Windows / Web）
 - Provider 状态管理
 - Material 3 设计系统
 - Flame 1.38.2 游戏引擎（组件化世界 + 相机跟随）
